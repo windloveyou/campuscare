@@ -24,6 +24,21 @@ from pathlib import Path
 from urllib.parse import urlparse, parse_qs, quote
 
 ROOT = Path(__file__).resolve().parent
+WEB_FILES = {
+    "/": "index.html",
+    **{"/" + name: name for name in (
+        "ui.js", "app.js", "workspace.js", "facilities.js", "auth.js", "mail.js",
+        "users.js", "admin-services.js", "style.css", "admin-services.css", "portal.css",
+        "campus-art.svg", "uow-mckinnon.webp", "uow-science.webp", "uow-smart.webp",
+    )},
+}
+WEB_TYPES = {
+    "html": "text/html; charset=utf-8",
+    "js": "text/javascript; charset=utf-8",
+    "css": "text/css; charset=utf-8",
+    "svg": "image/svg+xml",
+    "webp": "image/webp",
+}
 DB = Path(os.environ.get("CAMPUSCARE_DB", str(ROOT / "data/campuscare.sqlite3")))
 NOW = lambda: datetime.now(timezone.utc).isoformat(timespec="seconds")
 LOCK = threading.RLock()
@@ -593,28 +608,12 @@ class Handler(BaseHTTPRequestHandler):
             self.respond(accounts.options())
             return
         if not path.startswith("/api/"):
-            name = {
-                "/": "index.html",
-                "/app.js": "app.js",
-                "/auth.js": "auth.js",
-                "/mail.js": "mail.js",
-                "/users.js": "users.js",
-                "/admin-services.js": "admin-services.js",
-                "/admin-services.css": "admin-services.css",
-                "/style.css": "style.css",
-            }.get(path)
+            name = WEB_FILES.get(path)
             if not name:
                 raise APIError("页面不存在", 404)
             raw = (ROOT / "web" / name).read_bytes()
             self.send_response(200)
-            self.send_header(
-                "Content-Type",
-                {
-                    "html": "text/html; charset=utf-8",
-                    "js": "text/javascript; charset=utf-8",
-                    "css": "text/css; charset=utf-8",
-                }[name.split(".")[-1]],
-            )
+            self.send_header("Content-Type", WEB_TYPES[name.rsplit(".", 1)[1]])
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Referrer-Policy", "same-origin")
             self.end_headers()

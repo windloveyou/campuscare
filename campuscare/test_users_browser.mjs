@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_PACKAGE||'playwright');
 const temp=await mkdtemp(join(tmpdir(),'campuscare-users-'));
-const service=spawn('.venv/bin/python',['-B','server.py'],{env:{...process.env,HOST:'127.0.0.1',PORT:'8833',CAMPUSCARE_DB:join(temp,'test.db'),CAMPUSCARE_MAIL_CONFIG:join(temp,'mail.json'),CAMPUSCARE_MAIL_MODE:'disabled'},stdio:['ignore','pipe','pipe']});
+const service=spawn(process.env.CAMPUSCARE_TEST_PYTHON || (process.platform === 'win32' ? 'python' : '.venv/bin/python'),['-B','server.py'],{env:{...process.env,HOST:'127.0.0.1',PORT:'8833',CAMPUSCARE_DB:join(temp,'test.db'),CAMPUSCARE_MAIL_CONFIG:join(temp,'mail.json'),CAMPUSCARE_MAIL_MODE:'disabled'},stdio:['ignore','pipe','pipe']});
 let browser;
 try{
     await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Server startup timeout')),15000);service.stdout.on('data',d=>{if(d.toString().includes('running')){clearTimeout(timer);resolve();}});service.on('exit',code=>{clearTimeout(timer);reject(Error('Server exited '+code));});});

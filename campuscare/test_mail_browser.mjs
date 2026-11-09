@@ -22,7 +22,7 @@ with patch('mailservice.smtplib.SMTP_SSL') as smtp:
     smtp.return_value.__enter__.return_value.send_message.side_effect = capture
     server.main()
 `;
-const service = spawn('.venv/bin/python', ['-B', '-c', setup], {
+const service = spawn(process.env.CAMPUSCARE_TEST_PYTHON || (process.platform === 'win32' ? 'python' : '.venv/bin/python'), ['-B', '-c', setup], {
     env: {...process.env, HOST:'127.0.0.1', PORT:'8832', CAMPUSCARE_DB:join(temp,'test.db'), CAMPUSCARE_MAIL_CONFIG:join(temp,'mail-settings.json'), CAMPUSCARE_MAIL_MODE:'demo', TEST_OUTBOX:join(temp,'outbox.json')},
     stdio:['ignore','pipe','pipe'],
 });

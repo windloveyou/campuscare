@@ -109,7 +109,40 @@ http.serve_forever()
             }
         }
 
+        const visitor = await browser.newPage({viewport: {width: 1440, height: 960}});
+        visitor.on('pageerror', error => errors.push(error.message));
+        await visitor.goto(base);
+        await visitor.getByRole('heading', {name: /校园服务，.*从这里开始/}).waitFor();
+        await visitor.waitForFunction(() => Array.from(document.querySelectorAll('.campus-photo')).every(photo => photo.complete && photo.naturalWidth > 0));
+        await screenshot(visitor, 'campus-portal-public.png');
+        await visitor.getByRole('button', {name: '下一张校园照片'}).click();
+        assert.equal(await visitor.locator('.campus-photo.active').getAttribute('src'), '/uow-science.webp');
+        await visitor.getByRole('button', {name: '查看SMART 基础设施研究楼'}).click();
+        assert.equal(await visitor.locator('.campus-photo.active').getAttribute('src'), '/uow-smart.webp');
+        assert.match(await visitor.locator('#campus-photo-credit').getAttribute('href'), /Wikimedia|wikimedia/);
+        await visitor.waitForFunction(() => getComputedStyle(document.querySelector('.campus-photo.active')).opacity === '1');
+        await visitor.setViewportSize({width: 390, height: 844});
+        assert.equal(await visitor.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        await screenshot(visitor, 'campus-portal-public-mobile.png');
+        await visitor.getByRole('button', {name: '证明与申请', exact: true}).click();
+        assert.equal(await visitor.locator('#public-services .service-tile').count(), 2);
+        await visitor.locator('#public-services article').filter({hasText: '成绩单申请'}).getByRole('button', {name: '办理入口'}).click();
+        await visitor.getByText('登录后将打开：成绩单申请', {exact: true}).waitFor();
+        await visitor.getByRole('button', {name: '进入工作台'}).click();
+        assert.equal(await visitor.locator('#as-type').inputValue(), 'transcript');
+        await visitor.close();
+
         const student = await login('student');
+        await student.getByRole('heading', {name: '你的校园服务门户'}).waitFor();
+        await screenshot(student, 'campus-portal-student-home.png');
+        await student.keyboard.press('Control+k');
+        await student.locator('#command-query').fill('用户管理');
+        await student.getByText('没有匹配的服务', {exact: true}).waitFor();
+        await student.locator('#command-query').fill('在校证明');
+        await student.locator('#command-query').press('Enter');
+        assert.equal(await student.locator('#as-type').inputValue(), 'enrollment');
+        await student.goBack();
+        await student.getByRole('heading', {name: '你的校园服务门户'}).waitFor();
         await openPortal(student);
         await student.getByText('暂无办理记录。').waitFor();
         await screenshot(student, 'admin-services-student.png');
@@ -157,6 +190,9 @@ http.serve_forever()
         assert.equal(await student.locator('#as-filter-type').inputValue(), 'transcript');
 
         const admin = await login('admin');
+        await admin.getByRole('heading', {name: '校园运营总览'}).waitFor();
+        await admin.getByRole('button', {name: /待审批申请/}).waitFor();
+        await screenshot(admin, 'campus-portal-operations.png');
         const session = await (await admin.request.get(base + '/api/bootstrap')).json();
         const created = await admin.request.post(base + '/api/users', {
             headers: {'X-CSRF-Token': session.user.csrf},
@@ -277,7 +313,7 @@ http.serve_forever()
             await page.close();
         }
         assert.deepEqual(errors, []);
-        console.log('Browser checks passed: role-specific guides, reviewer collaboration, approval, supplement, cancellation confirmation and history, downloads, mobile layout.');
+        console.log('Browser checks passed: campus photo gallery, public service directory, role-based home, keyboard search, approval, reviewer collaboration, supplement, cancellation, downloads and mobile layout.');
     } finally {
         if (browser) await browser.close();
         service.kill();

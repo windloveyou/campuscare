@@ -41,7 +41,7 @@ const adminServices = (function () {
     const download = (id, material) => `/api${applications}/${encodeURIComponent(id)}/materials/${encodeURIComponent(material.id)}`;
     const detailPath = id => `${applications}/${encodeURIComponent(id)}`;
     const homeHref = '#admin-services';
-    const isPortalHash = () => /^#admin-services(?:[/?]|$)/.test(location.hash);
+    const isPortalHash = (hash = location.hash) => /^#admin-services(?:[/?]|$)/.test(hash);
     const href = (view = '', query = {}) => {
         const params = new URLSearchParams(Object.entries(query).filter(([, value]) => value));
         return homeHref + (view ? '/' + view : '') + (params.size ? '?' + params : '');

@@ -51,11 +51,13 @@ async function nav(name) {
 }
 try {
     await login('管理人员', 'admin');
-    if (await page.locator('.map-svg [data-location=A] text').first().textContent() !== '明理楼 A') throw Error('Map SVG label regression');
+    await page.getByRole('heading', {name: '校园运营总览'}).waitFor();
     await page.screenshot({
         path: 'artifacts/dashboard-desktop.png',
         fullPage: true
     });
+    await nav('设施概览');
+    if (await page.locator('.map-svg [data-location=A] text').first().textContent() !== '明理楼 A') throw Error('Map SVG label regression');
     await nav('设施台账');
     await page.locator('#filter-search').fill('A-101-FAN-01');
     await page.getByRole('button', {
@@ -200,7 +202,7 @@ try {
         height: 844
     });
     await page.reload();
-    await page.locator('.stats').waitFor();
+    await page.getByRole('heading', {name: '你的校园服务门户'}).waitFor();
     await page.screenshot({
         path: 'artifacts/dashboard-mobile.png',
         fullPage: false
