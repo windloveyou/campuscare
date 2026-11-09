@@ -13,7 +13,6 @@ const publicLanding = (function () {
         ['gcu-gallery-atrium.webp', '教学楼中庭', '天窗下的中庭设有多层木质楼梯与绿植'],
     ];
     const categories = [['all', '全部服务'], ['documents', '行政服务'], ['campus', '设施与资源'], ['staff', '人员工作区']];
-    const demo = {user: 'student', technician: 'tech', admin: 'admin'};
     const servicePhotos = {
         transcript: 'gcu-service-transcript.webp', enrollment: 'gcu-service-enrollment.webp',
         report: 'gcu-service-repair.webp', map: 'gcu-service-map.webp',
@@ -41,36 +40,9 @@ const publicLanding = (function () {
 
     const sectionMarker = symbol => `<span class="section-marker" aria-hidden="true">${icon(symbol)}</span>`;
 
-    function account(role, pending) {
-        const selected = workspace.catalog.find(item => item.key === pending);
-        const title = {user: '校园账号登录', admin: '运营人员登录', technician: '维修人员登录'}[role];
-        return `<section class="section section-coral" id="campus-account">
-            <div class="container">
-                <div class="section-head">${sectionMarker('users')}<h2 class="section-title">账号登录</h2></div>
-                <div class="form-wrap login-form" id="campus-signin" aria-label="校园账号登录">
-                    <h2 class="login-title">${title}</h2><p class="subtitle">${selected ? '登录后将打开：' + selected.title : '选择身份，进入你的服务与工作区。'}</p>
-                    <div class="role-pills" role="group" aria-label="选择登录身份">
-                        ${[['user', '学生 / 老师'], ['technician', '维修人员'], ['admin', '管理人员']].map(([key, label]) =>
-            `<button type="button" class="role-pill ${role === key ? 'active' : ''}" data-role="${key}" aria-pressed="${role === key}">${label}</button>`).join('')}
-                    </div>
-                    <form id="login-form" class="enroll-form">
-                        <div class="form-field"><label for="account">用户名 / 邮箱</label>
-                        <input id="account" list="demo-accounts" value="${demo[role]}" autocomplete="username" placeholder="用户名或注册邮箱" required>
-                        <datalist id="demo-accounts">${['student','teacher','tech','plumber','it','admin'].map(id => `<option value="${id}"></option>`).join('')}</datalist></div>
-                        <div class="form-field"><label for="password">密码</label><div class="sign-in-secret">
-                            <input id="password" type="password" value="Campus2026!" autocomplete="current-password" required>
-                            <button type="button" id="password-visibility" class="linkbtn" aria-pressed="false">显示</button></div></div>
-                        <p id="login-error" class="error" role="alert"></p><button class="btn btn-primary" type="submit">进入工作台 ${icon('arrow')}</button>
-                    </form>
-                    <div class="sign-in-links"><button type="button" class="linkbtn" id="register-link">没有账号？注册</button>
-                    <button type="button" class="linkbtn" id="reset-link">忘记密码？</button></div>
-                </div>
-            </div></section>`;
-    }
-
     // Preserves the upstream structure: topbar → site header → hero → ribbon
-    // → about split → class grid → enrollment → gallery. Business actions are ours.
-    function render(role, pending) {
+    // → about split → class grid → gallery. Business actions are ours.
+    function render() {
         return `<div class="public-site" id="top">
             <a class="skip-link" href="#main">跳到主要内容</a>
             <div class="topbar"><div class="container topbar-inner">
@@ -87,14 +59,14 @@ const publicLanding = (function () {
                     <a href="#using-campuscare" class="nav-link">关于门户</a>
                     <a href="#service-catalog" class="nav-link">服务目录</a>
                     <a href="#campus-gallery" class="nav-link">校园图景</a>
-                    <button type="button" class="nav-cta" data-public-focus>校园账号登录 ${icon('arrow')}</button>
+                    <a class="nav-cta" href="#login">校园账号登录 ${icon('arrow')}</a>
                 </nav>
             </div><span class="scroll-meter" aria-hidden="true"></span></header>
             <main id="main" tabindex="-1">
-                <section class="hero" id="hero" aria-labelledby="hero-title">
+                <h1 class="sr-only">校园服务</h1>
+                <section class="hero" id="hero" aria-label="校园照片轮播">
                     <div class="hero-bg" data-parallax="32">${bannerPhotos.map(([file, description], i) => `<img src="/${file}" alt="${description}"
                         class="campus-photo ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}" ${i === 0 ? 'fetchpriority="high"' : 'decoding="async"'}>`).join('')}</div>
-                    <div class="container hero-copy"><h1 class="hero-title" id="hero-title">校园服务</h1></div>
                 </section>
                 <section class="section ribbon-section" aria-label="快捷服务"><div class="container">
                     <div class="ribbon">${workspace.catalog.map(item => `<button type="button" class="ribbon-item" data-public-service="${item.key}">
@@ -120,7 +92,6 @@ const publicLanding = (function () {
             `<button type="button" data-public-filter="${key}" aria-pressed="${key === 'all'}">${label}</button>`).join('')}</div>
                         <div class="class-grid" id="public-services" aria-live="polite">${cards()}</div>
                     </div></section>
-                ${account(role, pending)}
                 <section class="section section-cream" id="campus-gallery"><div class="container">
                     <div class="section-head">${sectionMarker('image')}<h2 class="section-title">GCU <em>校园图景</em></h2>
                         <p>为本项目生成的校园概念图。点击图片可放大并切换场景。</p>

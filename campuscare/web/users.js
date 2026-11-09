@@ -71,7 +71,7 @@ async function openUserEditor(uid) {
     role.onchange=sync;$('#user-identity').onchange=sync;sync();
     const done=async result=>{
         if(!document.body.contains(form))return;
-        if(own){clearSession();toast(result.message);renderLogin();$('#account').value=uid;$('#password').value='';return;}
+        if(own){clearSession();toast(result.message);openLogin({role:'admin'},true);$('#account').value=uid;$('#password').value='';return;}
         await refresh();
         if(document.body.contains(form))closeDrawer();
         toast(result.message);if(page==='users')render();

@@ -2,8 +2,6 @@
 
 let state = null;
 let page = 'overview';
-let loginRole = 'user';
-let requestedService = '';
 
 async function api(path, body) {
     const response = await fetch('/api' + path, {
@@ -15,7 +13,7 @@ async function api(path, body) {
     if (!response.ok) {
         if (response.status === 401 && state && path !== '/login') {
             clearSession();
-            renderLogin();
+            renderPublic(true);
         }
         throw new Error(data.error || '请求失败');
     }
@@ -29,7 +27,6 @@ async function refresh() {
 function clearSession() {
     state = null;
     page = 'overview';
-    requestedService = '';
     portalMotion.resetPage();
     facilities.reset();
     if (typeof clearUsersView === 'function') clearUsersView();
@@ -81,12 +78,65 @@ function head(title, subtitle, action = '') {
     return `<div class="page-head"><div><h1>${title}</h1><p class="subtitle">${subtitle}</p></div>${action}</div>`;
 }
 
-function renderLogin() {
-    $('#app').innerHTML = publicLanding.render(loginRole, requestedService);
-    publicLanding.bind();
-    portalMotion.watchPublic($('.public-site'));
-    $('#register-link').onclick = () => renderAuth('register');
-    $('#reset-link').onclick = () => renderAuth('reset');
+function accountHref(kind, {service, role, next} = {}) {
+    const params = new URLSearchParams();
+    if (service) params.set('service', service.key);
+    if (role && role !== (service?.role || 'user')) params.set('role', role);
+    if (next) params.set('next', next);
+    return '#' + kind + (params.size ? '?' + params : '');
+}
+
+function accountLocation(hash = location.hash) {
+    const match = hash.match(/^#(login|register|reset)(?:\?(.*))?$/);
+    if (!match) return null;
+    const params = new URLSearchParams(match[2]);
+    const service = workspace.catalog.find(item => item.key === params.get('service'));
+    const requestedRole = params.get('role');
+    const role = Object.hasOwn(accountRoles, requestedRole) ? requestedRole : (service?.role || 'user');
+    return {kind: match[1], service: service?.role === role ? service : undefined, role, next: params.get('next')};
+}
+
+function openLogin(context = {}, replace = false) {
+    const hash = accountHref('login', context);
+    if (replace) {
+        history.replaceState(null, '', hash);
+        renderPublic(true);
+    } else {
+        location.hash = hash;
+    }
+}
+
+function renderPublic(focus = false) {
+    const hash = location.hash;
+    let context = accountLocation(hash);
+    const protectedPage = adminServices.isPortalHash(hash) || /^#campus\/[a-z-]+$/.test(hash);
+    const assetEntry = !hash && new URLSearchParams(location.search).has('asset');
+    if (!context && (protectedPage || assetEntry)) {
+        history.replaceState(null, '', accountHref('login', {next: protectedPage ? hash : ''}));
+        context = accountLocation();
+    }
+    if (!context) {
+        if ($('.public-site')) return;
+        document.title = 'CampusCare · 校园服务门户';
+        $('#app').innerHTML = publicLanding.render();
+        publicLanding.bind();
+        portalMotion.watchPublic($('.public-site'));
+        const section = ['#using-campuscare', '#service-catalog', '#campus-gallery'].includes(hash) ? $(hash) : null;
+        if (section) section.scrollIntoView();
+        else window.scrollTo(0, 0);
+        return;
+    }
+    publicLanding.unbind();
+    portalMotion.leavePublic();
+    if (context.kind === 'login') renderLoginForm(context);
+    else renderAuth(context.kind, context);
+    document.title = `${$('#account-heading').textContent} · CampusCare`;
+    window.scrollTo(0, 0);
+    if (focus) $('#account-heading').focus({preventScroll: true});
+}
+
+function renderLoginForm(context) {
+    $('#app').innerHTML = loginMarkup(context);
     $('#password-visibility').onclick = event => {
         const password = $('#password');
         const reveal = password.type === 'password';
@@ -102,12 +152,12 @@ function renderLogin() {
         try {
             await api('/login', {id: $('#account').value, password: $('#password').value});
             await refresh();
-            const target = workspace.catalog.find(item => item.key === requestedService)?.target;
-            requestedService = '';
-            if (target && navigate(target)) return;
+            const target = [context.service?.target, context.next].find(hash => hash && routeFor(state.user, hash));
+            history.replaceState(null, '', target || location.pathname + location.search);
             page = defaultPage();
             render();
             window.scrollTo(0, 0);
+            $('#content h1')?.focus({preventScroll: true});
         } catch (error) {
             if (form.isConnected) {
                 $('#login-error').textContent = error.message;
@@ -127,10 +177,11 @@ function openProfile() {
 }
 
 function render() {
-    if (!state) return renderLogin();
+    if (!state) return renderPublic();
     publicLanding.unbind();
     portalMotion.leavePublic();
     const user = state.user;
+    document.title = 'CampusCare · 校园服务门户';
     if (!workspace.allowed(user, page)) page = 'overview';
     $('#app').innerHTML = workspace.shell(user, page);
     const content = $('#content');
@@ -153,11 +204,6 @@ function render() {
     if (user.role === 'admin') $('#mail-settings-button').onclick = openMailSettings;
 }
 
-function focusLogin() {
-    $('#campus-signin')?.scrollIntoView({block: 'center'});
-    $('#account')?.focus({preventScroll: true});
-}
-
 document.addEventListener('click', async event => {
     const target = event.target.closest('button,[data-location],[data-ticket],[data-asset],[data-skip]');
     if (!target) return;
@@ -166,13 +212,11 @@ document.addEventListener('click', async event => {
         if (d.skip !== undefined) {
             event.preventDefault();
             $('#content')?.focus();
-        } else if (d.role) {
-            loginRole = d.role;
-            if (workspace.catalog.find(item => item.key === requestedService)?.role !== loginRole) requestedService = '';
-            renderLogin();
-            $(`[data-role="${loginRole}"]`)?.focus({preventScroll: true});
-        } else if (d.publicFocus !== undefined) {
-            focusLogin();
+        } else if (d.loginRole && !state) {
+            const context = accountLocation();
+            const role = d.loginRole;
+            openLogin({...context, role, service: context?.service?.role === role ? context.service : undefined}, true);
+            $(`[data-login-role="${role}"]`)?.focus({preventScroll: true});
         } else if (d.publicFilter) {
             $$('[data-public-filter]').forEach(button => button.setAttribute('aria-pressed', button === target));
             $('#public-services').innerHTML = publicLanding.cards(d.publicFilter);
@@ -180,10 +224,7 @@ document.addEventListener('click', async event => {
         } else if (d.publicService) {
             const service = workspace.catalog.find(item => item.key === d.publicService);
             if (!service) return;
-            requestedService = service.key;
-            loginRole = service.role;
-            renderLogin();
-            focusLogin();
+            openLogin({service});
         } else if (d.action === 'close') {
             closeDrawer();
         } else if (state) {
@@ -191,7 +232,7 @@ document.addEventListener('click', async event => {
                 await api('/logout', {});
                 clearSession();
                 history.replaceState(null, '', location.pathname + location.search);
-                renderLogin();
+                renderPublic();
                 window.scrollTo(0, 0);
             } else if (d.page) {
                 go(d.page);
@@ -223,6 +264,7 @@ $('#modal-root').addEventListener('click', event => {
 });
 window.addEventListener('hashchange', () => {
     if (state) showRoute(true);
+    else renderPublic(true);
 });
 
 (async () => {
@@ -231,6 +273,6 @@ window.addEventListener('hashchange', () => {
         page = defaultPage();
         render();
     } catch {
-        renderLogin();
+        renderPublic();
     }
 })();
