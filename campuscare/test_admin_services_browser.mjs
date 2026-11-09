@@ -56,6 +56,7 @@ http.serve_forever()
                 const message = await page.locator('#login-error').allTextContents();
                 throw new Error(`登录 ${account} 后未进入工作台：${[...message, ...errors].join('；')}`, {cause: error});
             }
+            assert.equal(await page.getByText(/COURSE PROTOTYPE|设备状态来自业务记录，非实时监测/).count(), 0);
             return page;
         }
         async function openPortal(page) {
@@ -112,6 +113,8 @@ http.serve_forever()
         await student.getByText('暂无办理记录。').waitFor();
         await screenshot(student, 'admin-services-student.png');
         await student.getByRole('link', {name: '查看办理指南', exact: true}).click();
+        await student.getByRole('heading', {name: '办理指南', exact: true}).waitFor();
+        assert.equal(await student.getByRole('heading', {name: '审批操作清单'}).count(), 0);
         await student.getByText('材料有哪些要求？', {exact: true}).click();
         await student.getByText(/首次提交可按需附加材料/).waitFor();
         assert.match(student.url(), /#admin-services\/guide$/);
@@ -160,7 +163,14 @@ http.serve_forever()
         });
         assert.equal(created.status(), 201, await created.text());
         await openPortal(admin);
-        await admin.getByRole('link', {name: '待领取 · 1', exact: true}).click();
+        await admin.getByRole('link', {name: '待领取 · 1', exact: true}).waitFor();
+        await admin.getByRole('link', {name: '查看审批指南', exact: true}).click();
+        await admin.getByRole('heading', {name: '审批操作清单', exact: true}).waitFor();
+        await admin.getByRole('heading', {name: '怎么选择审批结果', exact: true}).waitFor();
+        assert.equal(await admin.getByRole('heading', {name: '常见问题', exact: true}).count(), 0);
+        assert.equal(await admin.getByText(/COURSE PROTOTYPE|设备状态来自业务记录，非实时监测/).count(), 0);
+        await screenshot(admin, 'admin-services-approval-guide.png');
+        await admin.getByRole('link', {name: '打开待领取队列', exact: true}).click();
         assert.equal(await admin.locator('#as-status').inputValue(), 'pending');
         assert.equal(await admin.locator('#as-owner').inputValue(), 'unassigned');
         let review = await openRecord(admin, rowId);
@@ -242,7 +252,7 @@ http.serve_forever()
             await page.close();
         }
         assert.deepEqual(errors, []);
-        console.log('Browser checks passed: portal navigation, search, reviewer queues, claim, transfer, private handoff notes, approval permissions, supplement, download, mobile layout.');
+        console.log('Browser checks passed: role-specific guides, shared footer removed, reviewer queues, claim, transfer, approval, supplement, download, mobile layout.');
     } finally {
         if (browser) await browser.close();
         service.kill();

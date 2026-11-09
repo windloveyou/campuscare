@@ -156,6 +156,44 @@
     font-weight: 600;
 }
 
+.as-review-checklist, .as-decision-guide {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.as-review-checklist li {
+    display: flex;
+    gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.as-review-checklist h3 {
+    margin: 0;
+    font-size: 14px;
+}
+
+.as-review-checklist p, .as-decision-guide p {
+    margin: 6px 0 0;
+    line-height: 1.65;
+}
+
+.as-review-checklist + .as-actions {
+    margin-top: 18px;
+}
+
+.as-decision-guide {
+    display: grid;
+    gap: 10px;
+}
+
+.as-decision-guide li {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 12px;
+}
+
 .as-detail-bar {
     justify-content: space-between;
     margin-bottom: 16px;

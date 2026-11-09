@@ -193,7 +193,7 @@ function render() {
         users: usersPage,
         'admin-services': adminServices.view
     };
-    $('#content').innerHTML = (views[page] || overview)() + `<footer class="footer"><span>CampusCare / GlobalConnect University</span><span>COURSE PROTOTYPE · 设备状态来自业务记录，非实时监测</span></footer>`;
+    $('#content').innerHTML = (views[page] || overview)();
     bindPage();
     if (u.role === 'admin') {
         $('.top-actions').insertAdjacentHTML('afterbegin', '<button class="linkbtn" id="mail-settings-button">邮件服务</button>');

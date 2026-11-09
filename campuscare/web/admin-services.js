@@ -83,11 +83,12 @@ const adminServices = (function () {
             home: ['行政服务', reviewer ? '查看待办和最新申请，集中处理学生的成绩单与在校证明。' : '申请成绩单与在校证明，随时查看每一项办理进度。'],
             apply: ['新建申请', '核对资料、选择文件类型，再填写用途和支持材料。'],
             records: reviewer ? ['审批工作台', '筛选、查找并办理学生提交的申请。'] : ['我的申请', '按状态、类型或申请编号查找办理记录。'],
-            guide: ['办理指南', '了解申请条件、材料要求和常见问题。'],
+            guide: reviewer ? ['审批指南', '按操作清单核对申请，并选择适合的处理结果。']
+                : ['办理指南', '了解申请条件、材料要求和常见问题。'],
             detail: ['申请详情', '查看申请资料、附件和完整办理记录。'],
         }[route.view];
         const tabs = [['home', '服务首页'], ...(!reviewer ? [['apply', '新建申请']] : []),
-            ['records', reviewer ? '审批工作台' : '我的申请'], ['guide', '办理指南']];
+            ['records', reviewer ? '审批工作台' : '我的申请'], ['guide', reviewer ? '审批指南' : '办理指南']];
         return `<div class="page-head"><div><div class="eyebrow">CAMPUS OPERATIONS / ADMIN SERVICES</div>
             <h1 id="as-page-title" tabindex="-1">${title}</h1><p class="subtitle">${subtitle}</p></div></div>
             <nav class="as-nav" aria-label="行政服务导航">${tabs.map(([key, label]) => `<a href="${href(key === 'home' ? '' : key)}"
@@ -113,7 +114,7 @@ const adminServices = (function () {
             <h2>${reviewer ? '学生申请处理中心' : '校园证明，一处办理'}</h2>
             <p>${reviewer ? '从待审批队列开始，核对申请资料并记录办理结果。' : '从提交到补交、审批，办理记录集中保存在这里。'}</p>
             <div class="as-actions">${reviewer ? link(href('records', {status: 'pending'}), '处理待审批 ' + icon('arrow'), 'btn')
-                : link(href('apply'), icon('plus') + ' 新建申请', 'btn')}${link(href('guide'), '查看办理指南')}</div>
+                : link(href('apply'), icon('plus') + ' 新建申请', 'btn')}${link(href('guide'), reviewer ? '查看审批指南' : '查看办理指南')}</div>
             </div><span class="as-hero-icon" aria-hidden="true">${icon('ticket')}</span></section>
             <div class="as-metrics" aria-label="申请状态概览">${Object.entries(catalog.statuses).map(([key, label]) =>
                 `<a class="stat as-metric" href="${href('records', {status: key})}"><div class="stat-top">${esc(label)}
@@ -139,8 +140,7 @@ const adminServices = (function () {
             <li><strong>查看结果</strong><p>打开申请详情，查看审批状态和说明。</p></li></ol>`;
     }
 
-    function guide(catalog) {
-        const reviewer = catalog.mode === 'reviewer';
+    function studentGuide(catalog) {
         const questions = [
             ['成绩单和在校证明有什么区别？', '成绩单用于说明课程成绩；在校证明用于说明当前在校状态。请按接收方要求选择。'],
             ['账号自动带入的资料有误怎么办？', '学生可以在新建申请时直接修改或补填。更正仅用于当前申请，管理员审批时可以核对账号登记资料。'],
@@ -151,7 +151,31 @@ const adminServices = (function () {
         return `<div class="as-layout as-workspace"><section class="card"><div class="card-head"><div><h2>常见问题</h2><p>点击问题展开说明</p></div></div>
             <div class="card-body as-faq">${questions.map(([q, a]) => `<details><summary>${q}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>
             <aside class="card"><div class="card-head"><div><h2>办理流程</h2><p>从申请到结果</p></div></div><div class="card-body">${steps()}
-                ${reviewer ? link(href('records'), '前往审批工作台', 'btn') : link(href('apply'), '开始申请', 'btn')}</div></aside></div>`;
+                ${link(href('apply'), '开始申请', 'btn')}</div></aside></div>`;
+    }
+
+    function reviewerGuide(catalog) {
+        const checklist = [
+            ['clock', '领取待办', '从公共队列打开申请并领取经办。已由同事领取的申请，可请对方转交。'],
+            ['search', '核对申请资料', '核对提交账号、姓名、学号和文件类型。若详情列出不同的账号登记值，请先核实差异，再检查材料是否清晰、齐全。'],
+            ['check', '记录审批结果', '按右侧说明选择处理结果。退回或驳回时，审批说明会显示给学生，请写明需要补交的材料或未通过原因。'],
+            ['users', '交接或跟进补件', '转交给同事时可填写仅管理员可见的交接说明。学生补交后，申请会重新进入原经办人的待审批队列。'],
+        ];
+        const decisions = [
+            ['approved', '资料、申请类型和材料均已核实，可保存为通过。'],
+            ['needs_materials', '材料缺失或资料需要核对时退回，例如：“请补交能清楚显示学号的材料。”'],
+            ['rejected', '确认申请不符合办理条件时驳回，并说明原因或可咨询的部门。'],
+        ];
+        return `<div class="as-layout as-workspace">
+            <section class="card"><div class="card-head"><h2>审批操作清单</h2></div>
+                <div class="card-body"><ol class="as-review-checklist">${checklist.map(([symbol, title, description]) =>
+                    `<li><span class="ticket-icon">${icon(symbol)}</span><div><h3>${title}</h3><p>${description}</p></div></li>`).join('')}</ol>
+                    <div class="as-actions">${link(href('records', {status: 'pending', owner: 'unassigned'}), '打开待领取队列', 'btn')}
+                        ${link(href('records', {status: 'pending', owner: 'mine'}), '查看我的待办')}</div></div></section>
+            <aside class="card"><div class="card-head"><h2>怎么选择审批结果</h2></div>
+                <div class="card-body"><ul class="as-decision-guide">${decisions.map(([status, description]) =>
+                    `<li>${statusBadge(catalog, status)}<p>${description}</p></li>`).join('')}</ul></div></aside>
+            </div>`;
     }
 
     function fileField(id, limits, required = false) {
@@ -482,7 +506,9 @@ const adminServices = (function () {
             if (route.view === 'home') {
                 const data = await api(root + '/summary');
                 if (portal.isConnected) portal.innerHTML = dashboard(catalog, data);
-            } else if (route.view === 'guide') portal.innerHTML = guide(catalog);
+            } else if (route.view === 'guide') {
+                portal.innerHTML = catalog.mode === 'reviewer' ? reviewerGuide(catalog) : studentGuide(catalog);
+            }
             else if (route.view === 'apply') bindApply(portal, route, catalog);
             else if (route.view === 'records') bindRecords(portal, route, catalog);
             else bindDetail(portal, route, catalog);

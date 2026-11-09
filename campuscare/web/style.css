@@ -1142,15 +1142,6 @@ td .small {
     margin-top: 16px
 }
 
-.footer {
-    font-size: 9px;
-    color: #a0a89e;
-    display: flex;
-    justify-content: space-between;
-    margin-top: 27px;
-    letter-spacing: .5px
-}
-
 .checkrow {
     display: flex;
     align-items: center;
@@ -1392,11 +1383,6 @@ td .small {
 
     .form-grid {
         grid-template-columns: 1fr
-    }
-
-    .footer {
-        line-height: 1.8;
-        gap: 20px
     }
 
     .drawer {
