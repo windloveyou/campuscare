@@ -5,10 +5,6 @@
     --motion-emphasized: cubic-bezier(.2,.75,.25,1);
 }
 
-.public-site .hero-title em { color: #ffcd74; }
-.public-site .hero-shade {
-    background: linear-gradient(99deg,#1c262def 0%,#1c262da6 53%,#1c262d35 100%);
-}
 .public-site .class-card {
     border: 1px solid #eee2d6;
 }
@@ -87,17 +83,20 @@
 
 @media (prefers-reduced-motion: no-preference) {
     .public-site .hero-bg img {
-        transition: opacity 820ms ease, transform 5.8s linear;
+        transition: opacity 0s linear 820ms, transform 5.8s linear;
         transform: scale(1.005);
         translate: 0 var(--campus-shift, 0px);
         scale: 1.13;
+    }
+    .public-site .hero-bg img.active {
+        z-index: 1;
+        transition: opacity 820ms ease, transform 5.8s linear;
     }
     .public-site :is(.split-photo-frame,.class-img-wrap,.gallery-item) > img {
         translate: 0 var(--campus-shift, 0px);
         scale: 1.12;
     }
     .public-site.gallery-playing .hero-bg img.active { transform: scale(1.055); }
-    .public-site .hero-text { animation: portal-arrive 540ms var(--motion-emphasized) both; }
     .public-site .motion-revealed {
         animation: portal-reveal 570ms var(--motion-emphasized) both;
     }
@@ -128,11 +127,11 @@
         transform: translateY(1px) scale(.985);
     }
     .workspace-shell :is(.as-row,.workspace-metric,.operations-link) > .icon:last-child,
-    .public-site :is(.hero-actions,.class-card,.nav-cta) .icon {
+    .public-site :is(.class-card,.nav-cta) .icon {
         transition: transform var(--motion-standard) var(--motion-emphasized);
     }
     .workspace-shell :is(.as-row,.workspace-metric,.operations-link):hover > .icon:last-child,
-    .public-site :is(.hero-actions a,.class-card button,.nav-cta):hover .icon {
+    .public-site :is(.class-card button,.nav-cta):hover .icon {
         transform: translateX(3px);
     }
     .motion-page { animation: portal-arrive 300ms var(--motion-emphasized) both; }

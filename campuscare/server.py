@@ -31,6 +31,9 @@ WEB_FILES = {
         "users.js", "admin-services.js", "landing.js", "motion.js", "style.css", "admin-services.css", "portal.css",
         "little-wonders.css", "motion.css",
         "campus-art.svg", "gcu-quadrangle.webp", "gcu-learning-commons.webp", "gcu-campus-walk.webp",
+        "gcu-library-terrace.webp", "gcu-campus-garden.webp", "gcu-gallery-studio.webp", "gcu-gallery-atrium.webp",
+        "gcu-service-transcript.webp", "gcu-service-enrollment.webp", "gcu-service-repair.webp",
+        "gcu-service-map.webp", "gcu-service-review.webp", "gcu-service-maintenance.webp",
     )},
 }
 WEB_TYPES = {
