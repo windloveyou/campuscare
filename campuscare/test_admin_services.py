@@ -55,12 +55,23 @@ class AdminServicesTests(unittest.TestCase):
         catalog = self.student.call(ROOT + "/catalog")[1]
         self.assertTrue(catalog["can_apply"])
         self.assertEqual(catalog["profile"]["student_no"], "DEMO-STUDENT-01")
-        path = self.submit(materials=[material()], profile={"name": "伪造资料", "student_no": "OTHER"})
+        edits = {
+            "name": " 修正后的姓名 ", "student_no": "updated-2026", "class_name": "新班级",
+            "department": "新院系", "email": "Applicant@example.com",
+        }
+        path = self.submit(materials=[material()], profile=edits, applicant_id="admin")
+        self.assertEqual(self.student.call(ROOT + "/catalog")[1]["profile"], catalog["profile"])
+        review = self.admin.call(path)[1]
+        self.assertEqual(review["application"]["applicant_id"], "student")
+        self.assertEqual(review["account_profile"], catalog["profile"])
         with server.connect() as c:
             c.execute("UPDATE users SET name='更新后的资料' WHERE id='student'")
         server.seed()
         detail = self.student.call(path)[1]
-        self.assertEqual(detail["application"]["profile"], catalog["profile"])
+        self.assertEqual(detail["application"]["profile"], {
+            **edits, "name": "修正后的姓名", "student_no": "UPDATED-2026", "email": "applicant@example.com",
+        })
+        self.assertNotIn("account_profile", detail)
         self.assertEqual(detail["application"]["status"], "pending")
         self.assertEqual([e["action"] for e in detail["events"]], ["submitted"])
         self.assertNotIn("actor_id", detail["events"][0])
@@ -155,9 +166,21 @@ class AdminServicesTests(unittest.TestCase):
         self.assertEqual(self.admin.call(APPLICATIONS)[1]["total"], 0)
         with server.connect() as c:
             self.assertEqual(c.execute("SELECT count(*) FROM admin_service_materials").fetchone()[0], 0)
+
+    def test_profile_validation_and_missing_account_fields_can_be_filled(self):
+        with server.connect() as c:
             c.execute("UPDATE users SET student_no=NULL WHERE id='student'")
-        self.assertFalse(self.student.call(ROOT + "/catalog")[1]["can_apply"])
-        self.assertEqual(self.student.call(APPLICATIONS, {**valid, "student_no": "FAKE"})[0], 409)
+        catalog = self.student.call(ROOT + "/catalog")[1]
+        self.assertTrue(catalog["can_apply"])
+        self.assertEqual(catalog["profile"]["student_no"], "")
+        body = {"document_type": "enrollment", "purpose": "申请交换生"}
+        for invalid in (None, {}, {"student_no": "???"}, {"student_no": "TEST-01", "email": "bad"},
+                        {"student_no": "TEST-01", "name": " "}, {"student_no": "TEST-01", "role": "admin"}):
+            self.assertEqual(self.student.call(APPLICATIONS, {**body, "profile": invalid})[0], 400)
+        path = self.submit(profile={"student_no": "NEW-2026", "class_name": ""})
+        profile = self.student.call(path)[1]["application"]["profile"]
+        self.assertEqual(profile, {**catalog["profile"], "student_no": "NEW-2026", "class_name": ""})
+        self.assertEqual(self.student.call(ROOT + "/catalog")[1]["profile"], catalog["profile"])
 
     def test_status_filter_and_pagination(self):
         paths = [self.submit() for _ in range(21)]

@@ -44,10 +44,18 @@ http.serve_forever()
         async function login(account) {
             const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
             page.on('pageerror', error => errors.push(error.message));
+            const bootstrap = page.waitForResponse(response => response.url() === base + '/api/bootstrap');
             await page.goto(base);
+            await bootstrap;
             await page.locator('#account').fill(account);
+            await page.locator('#password').fill('Campus2026!');
             await page.getByRole('button', {name: '进入工作台'}).click();
-            await page.locator('.sidebar').waitFor();
+            try {
+                await page.locator('.sidebar').waitFor();
+            } catch (error) {
+                const message = await page.locator('#login-error').allTextContents();
+                throw new Error(`登录 ${account} 后未进入工作台：${[...message, ...errors].join('；')}`, {cause: error});
+            }
             return page;
         }
         async function openPortal(page) {
@@ -86,21 +94,37 @@ http.serve_forever()
 
         const student = await login('student');
         await openPortal(student);
-        await student.getByText('DEMO-STUDENT-01', {exact: true}).waitFor();
+        const number = student.getByLabel('学号 *', {exact: true});
+        await number.waitFor();
+        assert.equal(await number.inputValue(), 'DEMO-STUDENT-01');
         await student.getByText('当前没有符合条件的申请。').waitFor();
         await screenshot(student, 'admin-services-student.png');
 
+        const profileEdits = {
+            name: '申请人更正', student_no: 'UPDATED-01', class_name: '申请测试班',
+            department: '信息学院', email: 'applicant@example.com',
+        };
+        for (const [field, value] of Object.entries(profileEdits)) {
+            await student.locator('#as-profile-' + field).fill(value);
+        }
         let dialog = await submit(student, 'transcript', '实习申请 <script>测试</script>', [png]);
+        for (const value of Object.values(profileEdits)) {
+            await dialog.getByText(value, {exact: true}).waitFor();
+        }
         await dialog.getByText('实习申请 <script>测试</script>', {exact: true}).waitFor();
         await dialog.getByText('待审批', {exact: true}).waitFor();
         const rowId = await student.locator('[data-as-id]').first().getAttribute('data-as-id');
         await student.keyboard.press('Escape');
+        assert.equal(await number.inputValue(), 'DEMO-STUDENT-01');
 
         const admin = await login('admin');
         await openPortal(admin);
         assert.equal(await admin.locator('#as-status').inputValue(), 'pending');
         await admin.locator(`[data-as-id="${rowId}"]`).click();
         let review = admin.getByRole('dialog');
+        await review.getByText('账号登记资料', {exact: true}).waitFor();
+        await review.getByText('DEMO-STUDENT-01', {exact: true}).waitFor();
+        await review.getByText('UPDATED-01', {exact: true}).waitFor();
         await downloadMaterial(admin, review.getByRole('link', {name: /申请材料.png/}), png.name);
         await decide(review, 'needs_materials', '请补交用途说明材料。');
         await admin.keyboard.press('Escape');
@@ -150,7 +174,7 @@ http.serve_forever()
             await page.close();
         }
         assert.deepEqual(errors, []);
-        console.log('Browser checks passed: student application, downloads, return, supplement, approval, rejection, role navigation, mobile layout.');
+        console.log('Browser checks passed: editable applicant profile, account comparison, downloads, return, supplement, approval, rejection, role navigation, mobile layout.');
     } finally {
         if (browser) await browser.close();
         service.kill();

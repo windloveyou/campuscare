@@ -4,12 +4,36 @@ const adminServices = (function () {
     const root = '/admin-services';
     const applications = root + '/applications';
     const fields = {name: '姓名', student_no: '学号', class_name: '班级', department: '学院 / 院系', email: '邮箱'};
+    const profileInputAttributes = {
+        name: 'required minlength="2" maxlength="50"',
+        student_no: 'required minlength="3" maxlength="30" title="3–30 位字母、数字或连字符"',
+        class_name: 'maxlength="80"',
+        department: 'maxlength="80"',
+        email: 'type="email" maxlength="254"',
+    };
     const colors = {pending: 'blue', needs_materials: 'orange', approved: 'green', rejected: 'red'};
     const eventLabels = {submitted: '提交申请', supplemented: '补交材料', needs_materials: '退回补充材料', approved: '审批通过', rejected: '审批未通过'};
     const visible = user => user.role === 'admin' || (user.role === 'user' && user.identity === '学生');
     const statusBadge = (catalog, status) => `<span class="badge ${colors[status] || ''}">${esc(catalog.statuses[status])}</span>`;
-    const profile = values => `<dl class="as-profile">${Object.entries(fields).map(([key, label]) =>
-        `<div><dt>${label}</dt><dd>${esc(values[key] || '未登记')}</dd></div>`).join('')}</dl>`;
+    const profile = (values, keys = Object.keys(fields)) => `<dl class="as-profile">${keys.map(key =>
+        `<div><dt>${fields[key]}</dt><dd>${esc(values[key] || '未登记')}</dd></div>`).join('')}</dl>`;
+
+    function profileInputs(values) {
+        return `<div class="as-profile as-profile-inputs">${Object.entries(fields).map(([key, label]) =>
+            `<div><label for="as-profile-${key}">${label}${['name', 'student_no'].includes(key) ? ' *' : ''}</label>
+                <input id="as-profile-${key}" name="profile_${key}" value="${esc(values[key] || '')}" ${profileInputAttributes[key]}></div>`
+        ).join('')}</div>`;
+    }
+
+    function accountComparison(detail) {
+        const registered = detail.account_profile;
+        if (!registered) return '';
+        const item = detail.application;
+        const changed = Object.keys(fields).filter(key => registered[key] !== item.profile[key]);
+        return `<p class="small muted">提交账号：${esc(item.applicant_id)}</p>
+            ${changed.length ? `<h3>账号登记资料</h3><p class="small muted">以下登记资料与本次申请填写的内容不同，请核对。</p>
+                ${profile(registered, changed)}` : ''}`;
+    }
     const fileHelp = limits => `支持 PDF、PNG、JPG；每次最多 ${limits.max_files} 份，每份不超过 ${limits.max_bytes / 1048576} MB。`;
     const sizeLabel = bytes => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
     const download = (id, material) => `/api${applications}/${encodeURIComponent(id)}/materials/${encodeURIComponent(material.id)}`;
@@ -31,11 +55,10 @@ const adminServices = (function () {
 
     function applyCard(catalog) {
         return `<section class="card" aria-labelledby="as-apply-title">
-            <div class="card-head"><div><h2 id="as-apply-title">发起申请</h2><p>个人资料从校园账号自动填入。</p></div>${icon('ticket')}</div>
+            <div class="card-head"><div><h2 id="as-apply-title">发起申请</h2><p>已从校园账号带入资料，可直接补填或修改，仅用于本次申请。</p></div>${icon('ticket')}</div>
             <div class="card-body">
-                ${profile(catalog.profile)}
-                ${!catalog.can_apply ? '<p class="error">姓名或学号未登记，请联系管理员补全个人资料后再申请。</p>' : `
                 <form id="as-apply-form" class="as-form">
+                    ${profileInputs(catalog.profile)}
                     <label for="as-type">文件类型 *</label>
                     <select id="as-type" name="document_type" required><option value="">请选择文件类型</option>
                         ${Object.entries(catalog.types).map(([key, title]) => `<option value="${esc(key)}">${esc(title)}</option>`).join('')}
@@ -45,7 +68,7 @@ const adminServices = (function () {
                     ${fileField('as-files', catalog.materials)}
                     <p class="error as-error" role="alert"></p>
                     <button class="btn" type="submit">${icon('plus')} 提交申请</button>
-                </form>`}
+                </form>
             </div></section>`;
     }
 
@@ -111,7 +134,8 @@ const adminServices = (function () {
         panel.innerHTML = `
             <div class="detail-box as-detail"><div class="flex between">${statusBadge(catalog, item.status)}
             <span class="small muted">提交于 ${date(item.created)}</span></div>
-            <h3>申请资料</h3>${profile(item.profile)}<h3>申请用途</h3><p class="as-note">${esc(item.purpose)}</p></div>
+            <h3>申请资料</h3>${profile(item.profile)}${reviewer ? accountComparison(detail) : ''}
+            <h3>申请用途</h3><p class="as-note">${esc(item.purpose)}</p></div>
             <section class="detail-box as-detail"><h2>办理进度</h2>
                 <ol class="timeline as-timeline">${events.map(event => `<li class="timeline-item">
                     <strong>${eventLabels[event.action] || esc(event.action)}</strong>
@@ -250,6 +274,7 @@ const adminServices = (function () {
             const payload = {
                 document_type: inputs.document_type.value,
                 purpose: inputs.purpose.value,
+                profile: Object.fromEntries(Object.keys(fields).map(key => [key, inputs[`profile_${key}`].value])),
                 materials: await selectedFiles(inputs.materials, catalog.materials),
             };
             if (!active()) return;

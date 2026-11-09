@@ -8,6 +8,8 @@ import secrets
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+import accounts
+
 PREFIX = "/api/admin-services"
 TYPES = {"transcript": "成绩单", "enrollment": "在校证明"}
 STATUSES = {
@@ -80,6 +82,26 @@ def profile_for(user):
     return {key: user.get(key) or "" for key in PROFILE_FIELDS}
 
 
+def submitted_profile(user, edits, Error):
+    if not isinstance(edits, dict) or edits.keys() - set(PROFILE_FIELDS):
+        raise Error("申请资料格式无效")
+    values = {**profile_for(user), **edits}
+    name = text_field(values["name"], 50, "姓名", Error, required=True)
+    if len(name) < 2:
+        raise Error("姓名需 2–50 个字符")
+    number = text_field(values["student_no"], 30, "学号", Error, required=True)
+    if not re.fullmatch(r"[A-Za-z0-9-]{3,30}", number):
+        raise Error("学号需 3–30 位字母、数字或连字符")
+    email = text_field(values["email"], 254, "邮箱", Error)
+    return {
+        "name": name,
+        "student_no": number.upper(),
+        "class_name": text_field(values["class_name"], 80, "班级", Error),
+        "department": text_field(values["department"], 80, "院系", Error),
+        "email": accounts.email_address(email, Error) if email else "",
+    }
+
+
 def timestamp():
     return datetime.now(timezone.utc).isoformat(timespec="microseconds")
 
@@ -139,7 +161,7 @@ def read(c, user, path, query, Error):
         profile = profile_for(user) if mode == "student" else None
         return {
             "mode": mode, "types": TYPES, "statuses": STATUSES, "profile": profile,
-            "can_apply": bool(profile and profile["name"].strip() and profile["student_no"].strip()),
+            "can_apply": mode == "student",
             "materials": {"max_files": MAX_FILES, "max_bytes": MAX_FILE_BYTES, "extensions": list(FILE_TYPES)},
         }
     if path == PREFIX + "/applications":
@@ -159,7 +181,7 @@ def read(c, user, path, query, Error):
             raise Error("材料不存在", 404)
         return Download(material["filename"], material["data"])
     event_columns = "id,action,note,created" + (",actor_id" if mode == "reviewer" else "")
-    return {
+    result = {
         "application": application_view(row, mode),
         "events": [dict(event) for event in c.execute(
             "SELECT " + event_columns + " FROM admin_service_events WHERE application_id=? ORDER BY id",
@@ -170,6 +192,13 @@ def read(c, user, path, query, Error):
             " WHERE application_id=? ORDER BY event_id, rowid", (app_id,),
         )],
     }
+    if mode == "reviewer":
+        account = c.execute(
+            "SELECT name,student_no,class_name,department,email FROM users WHERE id=?",
+            (row["applicant_id"],),
+        ).fetchone()
+        result["account_profile"] = profile_for(dict(account))
+    return result
 
 
 def text_field(value, limit, label, Error, required=False):
@@ -230,9 +259,7 @@ def write(c, user, path, body, Error):
     if path == PREFIX + "/applications":
         if mode != "student":
             raise Error("仅学生可提交申请", 403)
-        profile = profile_for(user)
-        if not profile["name"].strip() or not profile["student_no"].strip():
-            raise Error("姓名或学号未登记，请联系管理员补全个人资料", 409)
+        profile = submitted_profile(user, body.get("profile", {}), Error)
         document_type = body.get("document_type")
         if not isinstance(document_type, str) or document_type not in TYPES:
             raise Error("请选择有效的申请类型")

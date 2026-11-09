@@ -12,7 +12,7 @@
     margin: 12px 0 16px;
 }
 
-.as-profile div {
+.as-profile:not(.as-profile-inputs) div {
     padding: 9px 12px;
     border: 1px solid var(--line, #e4e8df);
     border-radius: 8px;
@@ -35,6 +35,10 @@
 .as-form label {
     display: block;
     margin: 14px 0 6px;
+}
+
+.as-profile-inputs label {
+    margin-top: 0;
 }
 
 .as-form select, .as-form input, .as-form textarea {
