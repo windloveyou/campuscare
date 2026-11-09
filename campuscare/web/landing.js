@@ -9,27 +9,34 @@ const publicLanding = (function () {
     const categories = [['all', '全部服务'], ['documents', '行政服务'], ['campus', '设施与资源'], ['staff', '人员工作区']];
     const demo = {user: 'student', technician: 'tech', admin: 'admin'};
     const servicePhotos = {transcript: 0, enrollment: 1, report: 2, map: 1, review: 2, maintenance: 0};
+    const serviceAudiences = {transcript: '学生', enrollment: '学生', report: '学生 / 教师', map: '校内用户', review: '管理人员', maintenance: '维修人员'};
+    const counter = index => String(index + 1).padStart(2, '0');
     let dispose = () => {};
 
     // Adapted from the template's class-card markup and its original tag/image layout.
     function cards(active = 'all') {
-        return workspace.catalog.filter(item => active === 'all' || item.group === active).map(item => {
+        return workspace.catalog.map((item, index) => ({item, index}))
+            .filter(({item}) => active === 'all' || item.group === active).map(({item, index}) => {
             const [file] = photos[servicePhotos[item.key]];
-            return `<article class="class-card">
-                <div class="class-img-wrap"><img src="/${file}" alt="" class="class-img" loading="lazy"><span class="class-tag">${item.tag}</span></div>
-                <div class="class-body"><h3 class="class-name">${item.title}</h3>
+            return `<article class="class-card" data-service-group="${item.group}">
+                <div class="class-img-wrap" data-parallax="13"><img src="/${file}" alt="" class="class-img" loading="lazy">
+                    <span class="class-tag">${item.group === 'staff' ? '人员工作区' : item.tag}</span><span class="class-index" aria-hidden="true">${counter(index)}</span></div>
+                <div class="class-body"><div class="class-title-row"><span class="class-symbol" aria-hidden="true">${icon(item.icon)}</span><h3 class="class-name">${item.title}</h3></div>
                     <p class="class-desc">${item.desc}</p>
-                    <button type="button" class="btn btn-primary btn-sm" data-public-service="${item.key}">办理入口 ${icon('arrow')}</button></div>
+                    <div class="class-actions"><span class="class-audience">${icon('users')} ${serviceAudiences[item.key]}</span>
+                        <button type="button" class="btn btn-primary btn-sm" data-public-service="${item.key}">办理入口 ${icon('arrow')}</button></div></div>
             </article>`;
         }).join('');
     }
+
+    const sectionMarker = symbol => `<span class="section-marker" aria-hidden="true">${icon(symbol)}</span>`;
 
     function account(role, pending) {
         const selected = workspace.catalog.find(item => item.key === pending);
         const title = {user: '校园账号登录', admin: '运营人员登录', technician: '维修人员登录'}[role];
         return `<section class="section section-coral" id="campus-account">
             <div class="container">
-                <div class="section-head"><h2 class="section-title">账号登录</h2></div>
+                <div class="section-head">${sectionMarker('users')}<h2 class="section-title">账号登录</h2></div>
                 <div class="form-wrap login-form" id="campus-signin" aria-label="校园账号登录">
                     <h2 class="login-title">${title}</h2><p class="subtitle">${selected ? '登录后将打开：' + selected.title : '选择身份，进入你的服务与工作区。'}</p>
                     <div class="role-pills" role="group" aria-label="选择登录身份">
@@ -72,10 +79,10 @@ const publicLanding = (function () {
                     <a href="#campus-gallery" class="nav-link">校园图景</a>
                     <button type="button" class="nav-cta" data-public-focus>校园账号登录 ${icon('arrow')}</button>
                 </nav>
-            </div></header>
+            </div><span class="scroll-meter" aria-hidden="true"></span></header>
             <main id="main" tabindex="-1">
                 <section class="hero" id="hero" aria-label="GCU 校园图景轮播">
-                    <div class="hero-bg">${photos.map(([file, , description], i) => `<img src="/${file}" alt="${description}"
+                    <div class="hero-bg" data-parallax="32">${photos.map(([file, , description], i) => `<img src="/${file}" alt="${description}"
                         class="campus-photo ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}" ${i === 0 ? 'fetchpriority="high"' : 'decoding="async"'}>`).join('')}</div>
                     <div class="hero-shade" aria-hidden="true"></div>
                     <div class="container hero-copy"><div class="hero-text">
@@ -88,7 +95,8 @@ const publicLanding = (function () {
                         <div class="hero-badge"><span class="hero-badge-num">GCU</span><span class="hero-badge-label">SmartCampus<br>虚拟示例校区</span></div>
                     </div>
                     <div class="container campus-hero-tools"><div class="photo-caption"><span>GCU 校园概念图</span>
-                        <strong id="campus-photo-caption">${photos[0][1]}</strong></div>
+                        <strong id="campus-photo-caption">${photos[0][1]}</strong>
+                        <span id="campus-photo-index" aria-hidden="true">${counter(0)} / ${counter(photos.length - 1)}</span></div>
                         <div class="photo-controls">
                             <button type="button" data-slide-step="-1" aria-label="上一张校园照片">‹</button>
                             <div class="photo-dots">${photos.map(([, title], i) => `<button type="button" data-slide-index="${i}" aria-label="查看${title}" aria-pressed="${i === 0}"></button>`).join('')}</div>
@@ -103,9 +111,10 @@ const publicLanding = (function () {
                 </div></section>
                 <section class="section section-cream" id="using-campuscare"><div class="container">
                     <div class="split"><div class="split-img">
-                        <img src="/${photos[1][0]}" alt="${photos[1][2]}" class="split-photo" loading="lazy">
+                        <div class="split-photo-frame" data-parallax="24"><img src="/${photos[1][0]}" alt="${photos[1][2]}" class="split-photo" loading="lazy"></div>
                         <div class="split-badge"><span class="split-badge-num">GCU</span><span class="split-badge-label">共享学习空间</span></div>
                     </div><div class="split-copy">
+                        ${sectionMarker('grid')}
                         <h2 class="section-title">校园服务<em>概览</em></h2>
                         <p>GlobalConnect University（GCU）</p>
                         <ul class="check-list"><li>行政服务：成绩单申请、在校证明申请、申请进度查询</li>
@@ -115,7 +124,7 @@ const publicLanding = (function () {
                     </div></div>
                 </div></section>
                 <section class="section service-directory" id="service-catalog" aria-labelledby="catalog-heading">
-                    <div class="container"><div class="section-head">
+                    <div class="container"><div class="section-head">${sectionMarker('ticket')}
                         <h2 class="section-title" id="catalog-heading">校园<em>服务目录</em></h2></div>
                         <div class="directory-tabs" role="group" aria-label="服务分类">${categories.map(([key, label]) =>
             `<button type="button" data-public-filter="${key}" aria-pressed="${key === 'all'}">${label}</button>`).join('')}</div>
@@ -123,12 +132,12 @@ const publicLanding = (function () {
                     </div></section>
                 ${account(role, pending)}
                 <section class="section section-cream" id="campus-gallery"><div class="container">
-                    <div class="section-head"><p class="eyebrow">CAMPUS GALLERY</p><h2 class="section-title">走进<em>GCU 校园</em></h2>
+                    <div class="section-head">${sectionMarker('image')}<h2 class="section-title">GCU <em>校园图景</em></h2>
                         <p>为本项目生成的校园概念图。点击图片可放大并切换场景。</p></div>
                     <div class="gallery-grid">${photos.map(([file, title, description], index) => `<figure class="campus-gallery-card">
-                        <a href="/${file}" class="gallery-item" target="_blank" rel="noopener" data-campus-viewer="${index}" aria-label="查看${title}大图">
+                        <a href="/${file}" class="gallery-item" target="_blank" rel="noopener" data-campus-viewer="${index}" data-parallax="17" aria-label="查看${title}大图">
                         <img src="/${file}" alt="${description}" loading="lazy"></a>
-                        <figcaption>${title}</figcaption></figure>`).join('')}</div>
+                        <figcaption><span aria-hidden="true">${counter(index)}</span>${title}</figcaption></figure>`).join('')}</div>
                 </div></section>
             </main></div>`;
     }
@@ -190,6 +199,7 @@ const publicLanding = (function () {
         const pictures = [...root.querySelectorAll('.hero-bg img')];
         const dots = [...root.querySelectorAll('[data-slide-index]')];
         const caption = root.querySelector('#campus-photo-caption');
+        const photoIndex = root.querySelector('#campus-photo-index');
         const pause = root.querySelector('.gallery-play');
         const controls = root.querySelector('.photo-controls');
         const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -204,6 +214,7 @@ const publicLanding = (function () {
                 dots[index].setAttribute('aria-pressed', index === current);
             });
             caption.textContent = photos[current][1];
+            photoIndex.textContent = `${counter(current)} / ${counter(photos.length - 1)}`;
         }
         function play(active) {
             playing = active;

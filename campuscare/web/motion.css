@@ -89,6 +89,12 @@
     .public-site .hero-bg img {
         transition: opacity 820ms ease, transform 5.8s linear;
         transform: scale(1.005);
+        translate: 0 var(--campus-shift, 0px);
+        scale: 1.13;
+    }
+    .public-site :is(.split-photo-frame,.class-img-wrap,.gallery-item) > img {
+        translate: 0 var(--campus-shift, 0px);
+        scale: 1.12;
     }
     .public-site.gallery-playing .hero-bg img.active { transform: scale(1.055); }
     .public-site .hero-text { animation: portal-arrive 540ms var(--motion-emphasized) both; }
@@ -97,6 +103,10 @@
     }
     .public-site .motion-revealed:nth-child(3n + 2) { animation-delay: 45ms; }
     .public-site .motion-revealed:nth-child(3n) { animation-delay: 90ms; }
+    .public-site .split-copy.motion-revealed { animation-name: portal-copy-enter; }
+    .public-site .split-img.motion-revealed .split-photo-frame {
+        animation: portal-photo-unmask 760ms var(--motion-emphasized);
+    }
     .public-site .class-img { transition: transform 420ms var(--motion-emphasized); }
     .public-site .class-card:is(:hover,:focus-within) .class-img { transform: scale(1.055); }
     .public-site .ribbon-icon { transition: transform var(--motion-standard) var(--motion-emphasized); }
@@ -144,6 +154,14 @@
 
 @keyframes portal-reveal {
     from { opacity: .55; translate: 0 18px; }
+    to { opacity: 1; translate: 0 0; }
+}
+@keyframes portal-photo-unmask {
+    from { clip-path: inset(4% 11% 4% 0 round 20px); }
+    to { clip-path: inset(0 round 20px); }
+}
+@keyframes portal-copy-enter {
+    from { opacity: .6; translate: 16px 10px; }
     to { opacity: 1; translate: 0 0; }
 }
 @keyframes portal-arrive {

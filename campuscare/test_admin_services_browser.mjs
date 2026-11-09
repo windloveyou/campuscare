@@ -120,6 +120,17 @@ http.serve_forever()
         await motionVisitor.locator('.public-site.gallery-playing .campus-photo.active[src="/gcu-campus-walk.webp"]').waitFor();
         await motionVisitor.getByRole('button', {name: '暂停轮播'}).click();
         assert.equal(await motionVisitor.locator('.public-site.gallery-playing').count(), 0);
+        assert.equal(await motionVisitor.locator('#campus-photo-index').textContent(), '03 / 03');
+        const splitFrame = motionVisitor.locator('.split-photo-frame');
+        await splitFrame.scrollIntoViewIfNeeded();
+        await motionVisitor.locator('.split-img.motion-revealed').waitFor();
+        const imageTranslation = image => getComputedStyle(image).translate;
+        const splitImage = splitFrame.locator('img');
+        const priorShift = await splitImage.evaluate(imageTranslation);
+        await motionVisitor.evaluate(() => window.scrollBy({top: 150, behavior: 'instant'}));
+        await motionVisitor.waitForFunction(previous => getComputedStyle(document.querySelector('.split-photo')).translate !== previous, priorShift);
+        assert.notEqual(await splitImage.evaluate(imageTranslation), 'none');
+        assert.ok(await motionVisitor.locator('.scroll-meter').evaluate(meter => Number(meter.style.getPropertyValue('--page-progress'))) > 0);
         const animatedCard = motionVisitor.locator('#public-services .class-card').first();
         await animatedCard.hover();
         await motionVisitor.waitForFunction(() => {
@@ -135,6 +146,8 @@ http.serve_forever()
         await visitor.getByRole('heading', {name: '校园服务概览', exact: true}).waitFor();
         assert.equal(await visitor.getByText('演示账号说明', {exact: true}).count(), 0);
         assert.equal(await visitor.locator('.motion-revealed').count(), 0);
+        assert.equal(await visitor.locator('.scroll-meter').isVisible(), false);
+        assert.equal(await visitor.locator('.split-photo').evaluate(imageTranslation), 'none');
         await visitor.waitForFunction(() => Array.from(document.querySelectorAll('.campus-photo')).every(photo => photo.complete && photo.naturalWidth > 0));
         const campusImages = ['/gcu-quadrangle.webp', '/gcu-learning-commons.webp', '/gcu-campus-walk.webp'];
         assert.deepEqual(await visitor.locator('.campus-photo').evaluateAll(images => images.map(image => image.getAttribute('src'))), campusImages);
@@ -155,7 +168,7 @@ http.serve_forever()
         await visitor.getByRole('navigation', {name: '网站导航'}).getByRole('link', {name: '校园图景'}).click();
         assert.equal(await visitor.getByRole('button', {name: '打开菜单'}).getAttribute('aria-expanded'), 'false');
         assert.deepEqual(await visitor.locator('#campus-gallery .gallery-item').evaluateAll(links => links.map(link => link.getAttribute('href'))), campusImages);
-        await visitor.getByRole('heading', {name: /走进.*GCU 校园/}).waitFor();
+        await visitor.getByRole('heading', {name: 'GCU 校园图景', exact: true}).waitFor();
         const photoLink = visitor.getByRole('link', {name: '查看中央庭院大图'});
         await photoLink.click();
         const viewer = visitor.getByRole('dialog');
