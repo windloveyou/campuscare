@@ -126,17 +126,8 @@ function head(title, subtitle, action = '') {
 const newButton = () => state.user.role !== 'technician' ? `<button class="btn" data-action="new">${icon('plus')} 发起报修</button>` : '';
 
 function renderLogin() {
-    const accounts = loginRole === 'user' ? [
-        ['student', '林同学 · 学生'],
-        ['teacher', '陈老师 · 教师']
-    ] : loginRole === 'technician' ? [
-        ['tech', '王师傅 · 电工'],
-        ['plumber', '李师傅 · 水务'],
-        ['it', '赵工程师 · IT']
-    ] : [
-        ['admin', '黄天泽 · 校园管理人员']
-    ];
-    $('#app').innerHTML = `<div class="login"><section class="login-hero"><div><div class="brand"><span class="brand-mark">↗</span> CampusCare</div><div class="brand-sub">GLOBALCONNECT UNIVERSITY</div></div><div class="login-copy"><div class="eyebrow">A BETTER CAMPUS, TOGETHER.</div><h1>让每一处校园，<br>都被好好照顾。</h1><p>从一张照片，到一次修复。连接师生、维修人员与校园管理者，让设施维护清晰而有序。</p><div class="flex" style="margin-top:30px;color:#b8cdab;font-size:11px">${icon('map')} 一个校园 ${icon('users')} 三类角色 ${icon('leaf')} 持续维护</div></div><div class="small" style="color:#688d7b">CSIT883 · Module 03 / Campus maintenance</div></section><section class="login-form"><div class="eyebrow">WELCOME BACK</div><h1>进入校园工作台</h1><p class="subtitle">选择课程演示身份，体验完整的维护流程。</p><div class="role-pills">${[['user','学生 / 老师'],['technician','维修人员'],['admin','管理人员']].map(([k,n])=>`<button class="role-pill ${k===loginRole?'active':''}" data-role="${k}">${n}</button>`).join('')}</div><form id="login-form"><label for="account">用户名 / 邮箱</label><input id="account" list="demo-accounts" value="${accounts[0][0]}" autocomplete="username" placeholder="用户名或注册邮箱" required><datalist id="demo-accounts"><option value="student"><option value="teacher"><option value="tech"><option value="plumber"><option value="it"><option value="admin"></datalist><label for="password">密码</label><input id="password" type="password" value="Campus2026!" autocomplete="current-password" required><p id="login-error" class="error" role="alert"></p><button class="btn" type="submit">进入工作台 ${icon('arrow')}</button></form><div class="login-foot">演示密码：Campus2026!<br>虚拟 GCU 校区 · 所有初始资产、工单和历史数据均为课程模拟。<br>角色权限由后端校验，上传的照片保存在本地。</div></section></div>`;
+    const demoAccount = {user: 'student', technician: 'tech', admin: 'admin'}[loginRole];
+    $('#app').innerHTML = `<div class="login"><section class="login-hero"><div><div class="brand"><span class="brand-mark">↗</span> CampusCare</div><div class="brand-sub">GLOBALCONNECT UNIVERSITY</div></div><div class="login-copy"><div class="eyebrow">A BETTER CAMPUS, TOGETHER.</div><h1>让每一处校园，<br>都被好好照顾。</h1><p>从一张照片，到一次修复。连接师生、维修人员与校园管理者，让设施维护清晰而有序。</p><div class="flex" style="margin-top:30px;color:#b8cdab;font-size:11px">${icon('map')} 一个校园 ${icon('users')} 三类角色 ${icon('leaf')} 持续维护</div></div><div class="small" style="color:#688d7b">CSIT883 · Module 03 / Campus maintenance</div></section><section class="login-form"><div class="eyebrow">WELCOME BACK</div><h1>进入校园工作台</h1><p class="subtitle">选择课程演示身份，体验校园服务。</p><div class="role-pills">${[['user','学生 / 老师'],['technician','维修人员'],['admin','管理人员']].map(([k,n])=>`<button class="role-pill ${k===loginRole?'active':''}" data-role="${k}">${n}</button>`).join('')}</div><form id="login-form"><label for="account">用户名 / 邮箱</label><input id="account" list="demo-accounts" value="${demoAccount}" autocomplete="username" placeholder="用户名或注册邮箱" required><datalist id="demo-accounts"><option value="student"><option value="teacher"><option value="tech"><option value="plumber"><option value="it"><option value="admin"></datalist><label for="password">密码</label><input id="password" type="password" value="Campus2026!" autocomplete="current-password" required><p id="login-error" class="error" role="alert"></p><button class="btn" type="submit">进入工作台 ${icon('arrow')}</button></form><div class="login-foot">演示密码：Campus2026!<br>虚拟 GCU 校区 · 所有初始资产、工单和历史数据均为课程模拟。<br>角色权限由后端校验，上传的照片保存在本地。</div></section></div>`;
     $('#login-form').insertAdjacentHTML('afterend','<div class="flex between" style="margin-top:18px"><button class="linkbtn" id="register-link">没有账号？注册</button><button class="linkbtn" id="reset-link">忘记密码？</button></div>');
     $('#register-link').onclick=()=>renderAuth('register');
     $('#reset-link').onclick=()=>renderAuth('reset');
@@ -172,6 +163,8 @@ function render() {
         ['assets', 'box', '设施台账'],
         ['tickets', 'ticket', u.role === 'technician' ? '我的维修任务' : '工单中心'], ...(u.role !== 'technician' ? [
             ['report', 'plus', '智能报修']
+        ] : []), ...(adminServices.visible(u) ? [
+            ['admin-services', 'ticket', '行政服务']
         ] : []), ...(u.role === 'admin' ? [
             ['maintenance', 'chart', '维护与预测'],
             ['users', 'users', '用户管理'],
@@ -187,7 +180,8 @@ function render() {
         report: reportPage,
         maintenance: maintenancePage,
         assistant: assistantPage,
-        users: usersPage
+        users: usersPage,
+        'admin-services': adminServices.view
     };
     $('#content').innerHTML = (views[page] || overview)() + `<footer class="footer"><span>CampusCare / GlobalConnect University</span><span>COURSE PROTOTYPE · 设备状态来自业务记录，非实时监测</span></footer>`;
     bindPage();
@@ -301,6 +295,7 @@ function assistantPage() {
 
 function bindPage() {
     if (page === 'users' && state.user.role === 'admin') bindUsersPage();
+    if (page === 'admin-services' && adminServices.visible(state.user)) adminServices.bind();
     if (page === 'assets' && state.user.role === 'admin') $('.toolbar').insertAdjacentHTML('beforeend', '<button class="btn" data-action="add-asset">登记新设施</button>');
     $('#filter-search')?.addEventListener('input', e => {
         filters.search = e.target.value;

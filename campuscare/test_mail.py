@@ -82,7 +82,8 @@ class MailTests(unittest.TestCase):
                 self.assertNotIn('password', response)
                 self.assertNotIn('test-app-password', json.dumps(self.client.call('/mail/settings')[1]))
                 self.assertEqual(mailservice.config()['password'], 'test-app-password')
-                self.assertEqual(stat.S_IMODE(self.path.stat().st_mode), 0o600)
+                if os.name == 'posix':
+                    self.assertEqual(stat.S_IMODE(self.path.stat().st_mode), 0o600)
                 public = self.client.call('/auth/options')[1]
                 self.assertEqual(public['mail_mode'], 'smtp')
                 self.assertNotIn('sender@', json.dumps(public))

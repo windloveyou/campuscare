@@ -1,0 +1,131 @@
+.as-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    align-items: start;
+    gap: 20px;
+}
+
+.as-profile {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 12px 0 16px;
+}
+
+.as-profile div {
+    padding: 9px 12px;
+    border: 1px solid var(--line, #e4e8df);
+    border-radius: 8px;
+}
+
+.as-profile dt {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.as-profile dd {
+    margin: 4px 0 0;
+    overflow-wrap: anywhere;
+}
+
+.as-form {
+    margin-top: 12px;
+}
+
+.as-form label {
+    display: block;
+    margin: 14px 0 6px;
+}
+
+.as-form select, .as-form input, .as-form textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+.as-hint {
+    margin: 6px 0;
+}
+
+.as-error:empty {
+    display: none;
+}
+
+.as-form .btn {
+    margin-top: 12px;
+}
+
+.as-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.as-controls label {
+    display: block;
+    margin: 0 0 6px;
+}
+
+.as-results, .as-timeline {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.as-timeline {
+    margin-top: 14px;
+}
+
+.as-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    text-align: left;
+    gap: 10px;
+    padding: 12px 4px;
+    border: 0;
+    border-bottom: 1px solid var(--line, #e4e8df);
+    background: transparent;
+    color: inherit;
+}
+
+.as-row:hover, .as-row:focus-visible {
+    background: var(--light);
+}
+
+.as-row-main {
+    display: grid;
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    gap: 4px;
+}
+
+.as-pagination {
+    flex-wrap: wrap;
+    margin-top: 12px;
+}
+
+.as-detail h3 {
+    margin: 16px 0 8px;
+}
+
+.as-note, .as-download {
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.as-download {
+    display: block;
+    width: fit-content;
+    margin-top: 6px;
+    color: inherit;
+    text-decoration: underline;
+}
+
+@media (max-width: 1100px) {
+    .as-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

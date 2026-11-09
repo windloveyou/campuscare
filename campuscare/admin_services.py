@@ -1,0 +1,281 @@
+"""Certificate applications. Shares accounts and transactions with the host app."""
+
+import base64
+import binascii
+import json
+import re
+import secrets
+from dataclasses import dataclass
+from datetime import datetime, timezone
+
+PREFIX = "/api/admin-services"
+TYPES = {"transcript": "成绩单", "enrollment": "在校证明"}
+STATUSES = {
+    "pending": "待审批",
+    "needs_materials": "待补交材料",
+    "approved": "已通过",
+    "rejected": "未通过",
+}
+PROFILE_FIELDS = ("name", "student_no", "class_name", "department", "email")
+FILE_TYPES = {
+    "pdf": ("application/pdf", b"%PDF-"),
+    "png": ("image/png", b"\x89PNG\r\n\x1a\n"),
+    "jpg": ("image/jpeg", b"\xff\xd8\xff"),
+    "jpeg": ("image/jpeg", b"\xff\xd8\xff"),
+}
+MAX_FILES = 3
+MAX_FILE_BYTES = 2 * 1024 * 1024
+PAGE_SIZE = 20
+
+
+@dataclass(frozen=True)
+class Download:
+    filename: str
+    data: bytes
+
+
+def migrate(c):
+    c.executescript("""
+        CREATE TABLE IF NOT EXISTS admin_service_applications(
+            id TEXT PRIMARY KEY, applicant_id TEXT NOT NULL REFERENCES users(id),
+            document_type TEXT NOT NULL CHECK(document_type IN ('transcript','enrollment')),
+            profile TEXT NOT NULL, purpose TEXT NOT NULL,
+            status TEXT NOT NULL CHECK(status IN ('pending','needs_materials','approved','rejected')),
+            version INTEGER NOT NULL DEFAULT 1, created TEXT NOT NULL, updated TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS admin_service_applicant_queue
+            ON admin_service_applications(applicant_id, updated DESC, id DESC);
+        CREATE INDEX IF NOT EXISTS admin_service_review_queue
+            ON admin_service_applications(status, updated DESC, id DESC);
+        CREATE TABLE IF NOT EXISTS admin_service_events(
+            id INTEGER PRIMARY KEY, application_id TEXT NOT NULL REFERENCES admin_service_applications(id),
+            actor_id TEXT NOT NULL REFERENCES users(id), action TEXT NOT NULL,
+            note TEXT NOT NULL, created TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS admin_service_event_lookup
+            ON admin_service_events(application_id, id);
+        CREATE TABLE IF NOT EXISTS admin_service_materials(
+            id TEXT PRIMARY KEY, application_id TEXT NOT NULL REFERENCES admin_service_applications(id),
+            event_id INTEGER NOT NULL REFERENCES admin_service_events(id),
+            filename TEXT NOT NULL, data BLOB NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS admin_service_material_lookup
+            ON admin_service_materials(application_id, event_id);
+    """)
+
+
+def matches(path):
+    return path == PREFIX or path.startswith(PREFIX + "/")
+
+
+def access(user, Error):
+    if user["role"] == "admin":
+        return "reviewer"
+    if user["role"] == "user" and user["identity"] == "学生":
+        return "student"
+    raise Error("行政服务仅面向学生和管理人员", 403)
+
+
+def profile_for(user):
+    return {key: user.get(key) or "" for key in PROFILE_FIELDS}
+
+
+def timestamp():
+    return datetime.now(timezone.utc).isoformat(timespec="microseconds")
+
+
+def get_application(c, user, mode, app_id, Error):
+    row = c.execute(
+        "SELECT * FROM admin_service_applications WHERE id=?", (app_id,)
+    ).fetchone()
+    if row is None or (mode == "student" and row["applicant_id"] != user["id"]):
+        raise Error("申请不存在或无权查看", 404)
+    return row
+
+
+def application_view(row, mode):
+    result = dict(row)
+    result["profile"] = json.loads(result["profile"])
+    if mode == "student":
+        result.pop("applicant_id")
+    return result
+
+
+def listing(c, user, mode, query, Error):
+    status = query.get("status", [""])[0]
+    raw_page = query.get("page", ["1"])[0]
+    if (status and status not in STATUSES) or not re.fullmatch(r"[1-9][0-9]{0,8}", raw_page):
+        raise Error("查询条件无效")
+    page = int(raw_page)
+    filters, values = [], []
+    if mode == "student":
+        filters.append("applicant_id=?")
+        values.append(user["id"])
+    if status:
+        filters.append("status=?")
+        values.append(status)
+    where = " WHERE " + " AND ".join(filters) if filters else ""
+    # Count and page are read from the same snapshot.
+    c.execute("BEGIN")
+    total = c.execute("SELECT count(*) FROM admin_service_applications" + where, values).fetchone()[0]
+    rows = c.execute(
+        "SELECT id,document_type,profile,status,created,updated FROM admin_service_applications"
+        + where + " ORDER BY updated DESC,id DESC LIMIT ? OFFSET ?",
+        (*values, PAGE_SIZE, (page - 1) * PAGE_SIZE),
+    )
+    applications = []
+    for row in rows:
+        item = dict(row)
+        snapshot = json.loads(item.pop("profile"))
+        if mode == "reviewer":
+            item.update(name=snapshot["name"], student_no=snapshot["student_no"])
+        applications.append(item)
+    return {"applications": applications, "total": total, "page": page, "page_size": PAGE_SIZE}
+
+
+def read(c, user, path, query, Error):
+    mode = access(user, Error)
+    if path == PREFIX + "/catalog":
+        profile = profile_for(user) if mode == "student" else None
+        return {
+            "mode": mode, "types": TYPES, "statuses": STATUSES, "profile": profile,
+            "can_apply": bool(profile and profile["name"].strip() and profile["student_no"].strip()),
+            "materials": {"max_files": MAX_FILES, "max_bytes": MAX_FILE_BYTES, "extensions": list(FILE_TYPES)},
+        }
+    if path == PREFIX + "/applications":
+        return listing(c, user, mode, query, Error)
+    match = re.fullmatch(PREFIX + r"/applications/([^/]+)(?:/materials/([^/]+))?", path)
+    if not match:
+        raise Error("接口不存在", 404)
+    app_id, file_id = match.groups()
+    c.execute("BEGIN")
+    row = get_application(c, user, mode, app_id, Error)
+    if file_id is not None:
+        material = c.execute(
+            "SELECT filename,data FROM admin_service_materials WHERE id=? AND application_id=?",
+            (file_id, app_id),
+        ).fetchone()
+        if material is None:
+            raise Error("材料不存在", 404)
+        return Download(material["filename"], material["data"])
+    event_columns = "id,action,note,created" + (",actor_id" if mode == "reviewer" else "")
+    return {
+        "application": application_view(row, mode),
+        "events": [dict(event) for event in c.execute(
+            "SELECT " + event_columns + " FROM admin_service_events WHERE application_id=? ORDER BY id",
+            (app_id,),
+        )],
+        "materials": [dict(file) for file in c.execute(
+            "SELECT id,event_id,filename,length(data) size FROM admin_service_materials"
+            " WHERE application_id=? ORDER BY event_id, rowid", (app_id,),
+        )],
+    }
+
+
+def text_field(value, limit, label, Error, required=False):
+    if not isinstance(value, str) or re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff]", value):
+        raise Error(f"{label}格式无效")
+    value = value.strip()
+    if len(value) > limit or (required and not value):
+        raise Error(f"请填写{label}（最多 {limit} 字）" if required else f"{label}最多 {limit} 字")
+    return value
+
+
+def validate_materials(files, Error, required=False):
+    if not isinstance(files, list) or len(files) > MAX_FILES:
+        raise Error(f"每次最多上传 {MAX_FILES} 份材料")
+    if required and not files:
+        raise Error("请至少上传一份补交材料")
+    materials = []
+    for file in files:
+        if not isinstance(file, dict):
+            raise Error("材料格式无效")
+        filename, encoded = file.get("filename"), file.get("data")
+        if not isinstance(filename, str) or not re.fullmatch(r"[^/\\<>:\"|?*\x00-\x1f\x7f\ud800-\udfff]{1,120}", filename):
+            raise Error("材料文件名无效或超过 120 个字符")
+        kind = FILE_TYPES.get(filename.rpartition(".")[2].lower())
+        if kind is None:
+            raise Error("材料仅支持 PDF、PNG、JPG")
+        if not isinstance(encoded, str):
+            raise Error("材料内容无效")
+        if len(encoded) > 4 * ((MAX_FILE_BYTES + 2) // 3):
+            raise Error("每份材料不能超过 2 MB", 413)
+        try:
+            data = base64.b64decode(encoded, validate=True)
+        except (ValueError, binascii.Error):
+            raise Error("材料内容无效") from None
+        if len(data) > MAX_FILE_BYTES:
+            raise Error("每份材料不能超过 2 MB", 413)
+        if len(data) <= len(kind[1]) or not data.startswith(kind[1]):
+            raise Error("材料内容与扩展名不符或文件为空")
+        materials.append((filename, data))
+    return materials
+
+
+def record(c, app_id, actor_id, action, note, stamp, materials=()):
+    event_id = c.execute(
+        "INSERT INTO admin_service_events(application_id,actor_id,action,note,created) VALUES(?,?,?,?,?)",
+        (app_id, actor_id, action, note, stamp),
+    ).lastrowid
+    c.executemany(
+        "INSERT INTO admin_service_materials(id,application_id,event_id,filename,data) VALUES(?,?,?,?,?)",
+        [(secrets.token_hex(16), app_id, event_id, name, data) for name, data in materials],
+    )
+
+
+def write(c, user, path, body, Error):
+    """Host starts a write transaction before authenticating and commits on success."""
+    mode = access(user, Error)
+    stamp = timestamp()
+    if path == PREFIX + "/applications":
+        if mode != "student":
+            raise Error("仅学生可提交申请", 403)
+        profile = profile_for(user)
+        if not profile["name"].strip() or not profile["student_no"].strip():
+            raise Error("姓名或学号未登记，请联系管理员补全个人资料", 409)
+        document_type = body.get("document_type")
+        if not isinstance(document_type, str) or document_type not in TYPES:
+            raise Error("请选择有效的申请类型")
+        purpose = text_field(body.get("purpose", ""), 300, "申请用途", Error, required=True)
+        materials = validate_materials(body.get("materials", []), Error)
+        app_id = "AS-" + secrets.token_hex(8).upper()
+        c.execute(
+            "INSERT INTO admin_service_applications"
+            "(id,applicant_id,document_type,profile,purpose,status,created,updated)"
+            " VALUES(?,?,?,?,?,'pending',?,?)",
+            (app_id, user["id"], document_type, json.dumps(profile, ensure_ascii=False), purpose, stamp, stamp),
+        )
+        record(c, app_id, user["id"], "submitted", "", stamp, materials)
+        return {"id": app_id, "status": "pending", "version": 1}, 201
+
+    match = re.fullmatch(PREFIX + r"/applications/([^/]+)/(decision|materials)", path)
+    if not match:
+        raise Error("接口不存在", 404)
+    app_id, action = match.groups()
+    if action == "decision" and mode != "reviewer":
+        raise Error("仅管理员可审批申请", 403)
+    if action == "materials" and mode != "student":
+        raise Error("仅申请学生可补交材料", 403)
+    row = get_application(c, user, mode, app_id, Error)
+    if type(body.get("version")) is not int or body["version"] != row["version"]:
+        raise Error("申请已更新，请刷新详情后再操作", 409)
+    if action == "decision":
+        if row["status"] != "pending":
+            raise Error("只有待审批申请可以审批", 409)
+        status = body.get("decision")
+        if status not in ("approved", "rejected", "needs_materials"):
+            raise Error("请选择有效的审批结果")
+        note = text_field(body.get("note", ""), 500, "审批说明", Error, required=status != "approved")
+        event, materials = status, []
+    else:
+        if row["status"] != "needs_materials":
+            raise Error("只有待补交材料的申请可以补交", 409)
+        note = text_field(body.get("note", ""), 500, "补充说明", Error)
+        materials = validate_materials(body.get("materials", []), Error, required=True)
+        event, status = "supplemented", "pending"
+    c.execute(
+        "UPDATE admin_service_applications SET status=?,version=version+1,updated=? WHERE id=?",
+        (status, stamp, app_id),
+    )
+    record(c, app_id, user["id"], event, note, stamp, materials)
+    return {"id": app_id, "status": status, "version": row["version"] + 1}, 200

@@ -12,13 +12,16 @@ import threading
 import urllib.request
 import urllib.error
 import accounts
+import admin_services
+import demo_accounts
 import mailservice
 import user_admin
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from http.cookies import SimpleCookie
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, quote
 
 ROOT = Path(__file__).resolve().parent
 DB = Path(os.environ.get("CAMPUSCARE_DB", str(ROOT / "data/campuscare.sqlite3")))
@@ -36,11 +39,17 @@ STATUS = {
 }
 
 
+@contextmanager
 def connect():
+    """Scope a transaction and release the SQLite handle on every exit."""
     c = sqlite3.connect(str(DB), timeout=15)
-    c.row_factory = sqlite3.Row
-    c.execute("PRAGMA foreign_keys=ON")
-    return c
+    try:
+        c.row_factory = sqlite3.Row
+        c.execute("PRAGMA foreign_keys=ON")
+        with c:
+            yield c
+    finally:
+        c.close()
 
 
 def digest(password, salt):
@@ -66,17 +75,11 @@ def seed():
         """
         )
         accounts.migrate(c)
+        admin_services.migrate(c)
+        demo_accounts.migrate(c)
         if c.execute("SELECT count(*) FROM users").fetchone()[0]:
             return
-        people = [
-            ("student", "林同学", "user", "学生", "D1-201", ""),
-            ("teacher", "陈老师", "user", "教师", "", ""),
-            ("tech", "王师傅", "technician", "维修人员", "", "电工"),
-            ("plumber", "李师傅", "technician", "维修人员", "", "水务"),
-            ("it", "赵工程师", "technician", "维修人员", "", "IT"),
-            ("admin", "黄天泽", "admin", "校园管理人员", "", ""),
-        ]
-        for uid, name, role, identity, room, skill in people:
+        for uid, name, role, identity, room, skill in demo_accounts.PEOPLE:
             salt = secrets.token_hex(16)
             c.execute(
                 "INSERT INTO users(id,name,role,identity,room,skill,salt,password) VALUES(?,?,?,?,?,?,?,?)",
@@ -91,6 +94,7 @@ def seed():
                     digest("Campus2026!", salt),
                 ),
             )
+        demo_accounts.fill_demo_student(c)
         locations = [
             ("A", "明理楼 A", "teaching", 28, 28, "A101 · A201 · A202"),
             ("B", "知行楼 B", "teaching", 62, 28, "B101 · B201 · B202"),
@@ -552,6 +556,8 @@ class Handler(BaseHTTPRequestHandler):
             size = int(self.headers.get("Content-Length", 0))
         except ValueError:
             raise APIError("请求格式错误")
+        if size < 0:
+            raise APIError("请求格式错误")
         if size > 9 * 1024 * 1024:
             raise APIError("请求过大", 413)
         try:
@@ -593,6 +599,8 @@ class Handler(BaseHTTPRequestHandler):
                 "/auth.js": "auth.js",
                 "/mail.js": "mail.js",
                 "/users.js": "users.js",
+                "/admin-services.js": "admin-services.js",
+                "/admin-services.css": "admin-services.css",
                 "/style.css": "style.css",
             }.get(path)
             if not name:
@@ -611,6 +619,25 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Referrer-Policy", "same-origin")
             self.end_headers()
             self.wfile.write(raw)
+            return
+        if admin_services.matches(path):
+            with connect() as c:
+                u = self.auth(c)
+                result = admin_services.read(c, u, path, parse_qs(parsed.query), APIError)
+            if isinstance(result, admin_services.Download):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header(
+                    "Content-Disposition",
+                    "attachment; filename*=UTF-8''" + quote(result.filename, safe=""),
+                )
+                self.send_header("Content-Length", str(len(result.data)))
+                self.send_header("Cache-Control", "private, no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(result.data)
+            else:
+                self.respond(result)
             return
         with connect() as c:
             u = self.auth(c)
@@ -792,6 +819,13 @@ class Handler(BaseHTTPRequestHandler):
                     {"ok": True},
                     cookie=f"campus_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200",
                 )
+                return
+            if admin_services.matches(path):
+                c.execute("BEGIN IMMEDIATE")
+                u = self.auth(c, True)
+                result, status = admin_services.write(c, u, path, body, APIError)
+                c.commit()
+                self.respond(result, status)
                 return
             u = self.auth(c, True)
             if path == '/api/users' or path.startswith('/api/users/'):
