@@ -328,26 +328,10 @@
     display: grid; grid-template-columns: 1fr 1.1fr;
     gap: 3.5rem; align-items: center;
   }
-  .split-img { position: relative; }
   .split-photo {
     width: 100%; border-radius: var(--radius);
     box-shadow: var(--shadow-md);
     aspect-ratio: 5 / 6; object-fit: cover;
-  }
-  .split-badge {
-    position: absolute; left: -1.25rem; bottom: 2rem;
-    background: var(--clr-gold);
-    border-radius: var(--radius);
-    padding: 1rem 1.3rem;
-    box-shadow: var(--shadow-md);
-  }
-  .split-badge-num {
-    display: block; font-family: var(--ff-display);
-    font-size: 1.9rem; font-weight: 800; color: var(--clr-ink); line-height: 1;
-  }
-  .split-badge-label {
-    font-family: var(--ff-display); font-weight: 700;
-    font-size: 0.82rem; color: var(--clr-ink-soft);
   }
   .split-copy .section-title { margin-bottom: 1.1rem; }
   .split-copy > p { margin-bottom: 1.2rem; }
@@ -366,7 +350,6 @@
   }
   @media (max-width: 992px) {
     .split { grid-template-columns: 1fr; gap: 2.5rem; }
-    .split-badge { left: 1rem; }
   }
 
   /* ---------- Class cards ---------- */
@@ -570,13 +553,6 @@
   #using-campuscare {
     background: radial-gradient(ellipse at 0 85%, #f1e4d2, transparent 42%),
                 radial-gradient(ellipse at 98% 15%, #e2efea, transparent 34%), var(--clr-cream);
-  }
-  .split-img { isolation: isolate; }
-  .split-img::before {
-    content: ''; position: absolute; z-index: -1; inset: 32% 15% -15px 0;
-    border-radius: var(--radius);
-    background: radial-gradient(circle, #21696155 1.2px, transparent 1.4px) 0 0 / 11px 11px;
-    pointer-events: none;
   }
   .split-photo-frame {
     overflow: hidden; border-radius: var(--radius); box-shadow: var(--shadow-md);

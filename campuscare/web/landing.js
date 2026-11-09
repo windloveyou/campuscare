@@ -112,7 +112,6 @@ const publicLanding = (function () {
                 <section class="section section-cream" id="using-campuscare"><div class="container">
                     <div class="split"><div class="split-img">
                         <div class="split-photo-frame" data-parallax="24"><img src="/${photos[1][0]}" alt="${photos[1][2]}" class="split-photo" loading="lazy"></div>
-                        <div class="split-badge"><span class="split-badge-num">GCU</span><span class="split-badge-label">共享学习空间</span></div>
                     </div><div class="split-copy">
                         ${sectionMarker('grid')}
                         <h2 class="section-title">校园服务<em>概览</em></h2>
