@@ -8,6 +8,12 @@
 
 两个演示账号的密码均为 `Campus2026!`。申请表的姓名和学号必填，其他三项选填。表单修改只保存到本次申请，不修改账号登记、登录邮箱或以前的申请。当前模块覆盖提交、人工审批和进度查询，审批通过代表业务状态更新；正式文件签发、智能预审和主动通知由独立模块衔接。
 
+## 管理员协作
+
+- 进入「行政服务 → 待领取」，打开一条待审批申请并点「领取经办」。该申请进入个人的「我负责的」队列；未领取的申请也可直接审批，系统会把审批人登记为经办人。
+- 当前经办人可转交给另一名启用的管理员，也可交回公共队列。可填写交接说明；学生只看得到办理状态和对外审批意见。补交材料后仍回到原经办人的队列。若原经办人被停用或调整为非管理员，其他管理员可重新领取。
+- 若要演示转交，请通过「用户管理」新建第二个管理员账号。两人同时领取时只允许一人成功；已通过或驳回的记录不能再转交。
+
 ## 模块边界
 
 | 文件 | 职责 |
@@ -22,7 +28,7 @@
 
 前端使用独立的 `#admin-services` 路径空间，子页分别为 `/apply`、`/records`、`/guide`、`/detail/{id}`。主工作台仅负责导航接入和恢复链接。
 
-API 前缀为 `/api/admin-services`。`GET /catalog` 返回角色、选项和学生资料；`GET /summary` 返回当前角色有权访问的各状态数量及最近四条记录；`GET /applications` 支持 `status`、`type`、`q`（编号）和 `page` 查询；`POST /applications` 创建；`GET /applications/{id}` 获取详情；`POST /applications/{id}/decision` 或 `POST /applications/{id}/materials` 分别审批或补交，需附当前 `version`；`GET /applications/{id}/materials/{fileId}` 下载。以上路径均相对于此前缀。
+API 前缀为 `/api/admin-services`。`GET /catalog` 返回角色、选项和学生资料；`GET /summary` 返回各状态数量及最近四条记录，管理员另外收到待审批队列的经办统计；`GET /applications` 支持 `status`、`type`、`q`（编号）和 `page` 查询，管理员可用 `owner=mine` 或 `owner=unassigned`。详情为 `GET /applications/{id}`，下载为 `GET /applications/{id}/materials/{fileId}`；创建为 `POST /applications`。审批、补交、分配分别提交到 `POST /applications/{id}/decision`、`/materials`、`/assignment`，均需附当前 `version`。分配操作使用 `operation=claim|release|transfer`，转交时附 `reviewer_id`。启动迁移会保留旧记录，既有申请默认未分配。以上路径均相对于此前缀。
 
 ## 团队合并
 

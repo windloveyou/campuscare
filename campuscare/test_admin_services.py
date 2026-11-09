@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import sqlite3
 import tempfile
 import threading
 import unittest
@@ -10,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import demo_accounts
+import admin_services
 import server
 from test_system import Client
 
@@ -21,6 +23,35 @@ PDF = b"%PDF-1.4\n%%EOF\n"
 
 def material(filename="申请材料.pdf", data=PDF):
     return {"filename": filename, "data": base64.b64encode(data).decode()}
+
+
+class AssignmentMigrationTests(unittest.TestCase):
+    def test_legacy_application_and_history_survive_repeated_upgrade(self):
+        with sqlite3.connect(":memory:") as c:
+            self.addCleanup(c.close)
+            c.row_factory = sqlite3.Row
+            c.executescript("""
+                CREATE TABLE users(id TEXT PRIMARY KEY);
+                CREATE TABLE admin_service_applications(
+                    id TEXT PRIMARY KEY, applicant_id TEXT REFERENCES users(id),
+                    document_type TEXT, profile TEXT, purpose TEXT, status TEXT,
+                    version INTEGER, created TEXT, updated TEXT
+                );
+                CREATE TABLE admin_service_events(
+                    id INTEGER PRIMARY KEY, application_id TEXT REFERENCES admin_service_applications(id),
+                    actor_id TEXT REFERENCES users(id), action TEXT, note TEXT, created TEXT
+                );
+                INSERT INTO users VALUES('student');
+                INSERT INTO admin_service_applications VALUES(
+                    'AS-OLD','student','transcript','{}','legacy','pending',4,'created','updated'
+                );
+                INSERT INTO admin_service_events VALUES(1,'AS-OLD','student','submitted','legacy','created');
+            """)
+            for _ in range(2):
+                admin_services.migrate(c)
+            row = c.execute("SELECT id,purpose,version,reviewer_id FROM admin_service_applications").fetchone()
+            self.assertEqual(tuple(row), ("AS-OLD", "legacy", 4, None))
+            self.assertEqual(c.execute("SELECT note FROM admin_service_events").fetchone()[0], "legacy")
 
 
 class AdminServicesTests(unittest.TestCase):
@@ -44,6 +75,16 @@ class AdminServicesTests(unittest.TestCase):
         client = Client(self.base)
         client.login(uid)
         return client
+
+    def add_reviewer(self, uid="second_admin"):
+        code, result = self.admin.call("/users", {
+            "username": uid, "name": "协作管理员", "role": "admin", "password": "Reviewer2026!",
+        })
+        self.assertEqual(code, 201, result)
+        reviewer = Client(self.base)
+        self.assertEqual(reviewer.call("/login", {"id": uid, "password": "Reviewer2026!"})[0], 200)
+        reviewer.csrf = reviewer.call("/bootstrap")[1]["user"]["csrf"]
+        return reviewer
 
     def submit(self, **kwargs):
         body = {"document_type": "transcript", "purpose": "用于实习申请", **kwargs}
@@ -119,6 +160,63 @@ class AdminServicesTests(unittest.TestCase):
         self.assertEqual([e["action"] for e in detail["events"]], ["submitted", "rejected"])
         self.assertEqual(detail["application"]["version"], 2)
         self.assertEqual(self.admin.call(path + "/decision", {"version": 2, "decision": "approved"})[0], 409)
+
+    def test_collaborative_review_transfer_release_and_student_privacy(self):
+        other = self.add_reviewer()
+        path = self.submit()
+        endpoint = path + "/assignment"
+        claim = {"operation": "claim", "version": 1}
+        self.assertEqual(self.student.call(endpoint, claim)[0], 403)
+        self.assertEqual(self.student.call(APPLICATIONS + "?owner=mine")[0], 403)
+        self.assertEqual(self.admin.call(endpoint, claim, csrf=False)[0], 403)
+        gate = threading.Barrier(2)
+
+        def simultaneous_claim(client):
+            gate.wait(timeout=5)
+            return client.call(endpoint, claim)[0]
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            outcomes = list(pool.map(simultaneous_claim, (self.admin, other)))
+        self.assertEqual(sorted(outcomes), [200, 409])
+        owner, recipient = (self.admin, other) if outcomes[0] == 200 else (other, self.admin)
+        recipient_id = "second_admin" if recipient is other else "admin"
+        self.assertEqual(owner.call(ROOT + "/summary")[1]["workload"], {"mine": 1, "unassigned": 0})
+        self.assertEqual(recipient.call(APPLICATIONS + "?owner=mine")[1]["total"], 0)
+        self.assertEqual(recipient.call(path + "/decision", {"version": 2, "decision": "approved"})[0], 403)
+        self.assertEqual(recipient.call(endpoint, {"version": 2, "operation": "release"})[0], 403)
+        self.assertEqual(owner.call(endpoint, {"version": 2, "operation": "transfer", "reviewer_id": "teacher"})[0], 409)
+        code, result = owner.call(endpoint, {
+            "version": 2, "operation": "transfer", "reviewer_id": recipient_id, "note": "内部：需要核对原件",
+        })
+        self.assertEqual((code, result["version"]), (200, 3))
+        self.assertTrue(recipient.call(path)[1]["assignment"]["mine"])
+        self.assertEqual(recipient.call(APPLICATIONS + "?owner=mine")[1]["total"], 1)
+        self.assertIn("内部：需要核对原件", recipient.call(path)[1]["events"][-1]["note"])
+        public = self.student.call(path)[1]
+        self.assertNotIn("assignment", public)
+        self.assertNotIn("reviewer_id", public["application"])
+        self.assertEqual([event["action"] for event in public["events"]], ["submitted"])
+        self.assertEqual(recipient.call(endpoint, {"version": 3, "operation": "release"})[0], 200)
+        self.assertEqual(owner.call(APPLICATIONS + "?owner=unassigned")[1]["total"], 1)
+        self.assertEqual(owner.call(path + "/decision", {"version": 4, "decision": "approved"})[0], 200)
+        self.assertTrue(owner.call(path)[1]["assignment"]["mine"])
+        self.assertEqual(owner.call(endpoint, {"version": 5, "operation": "release"})[0], 409)
+
+    def test_inactive_reviewer_can_be_replaced_and_supplement_keeps_assignment(self):
+        other = self.add_reviewer()
+        path = self.submit()
+        self.assertEqual(other.call(path + "/assignment", {"version": 1, "operation": "claim"})[0], 200)
+        self.assertEqual(other.call(path + "/decision", {
+            "version": 2, "decision": "needs_materials", "note": "请补交材料",
+        })[0], 200)
+        self.assertEqual(self.student.call(path + "/materials", {"version": 3, "materials": [material()]})[0], 200)
+        self.assertEqual(other.call(ROOT + "/summary")[1]["workload"]["mine"], 1)
+        account = self.admin.call("/users/second_admin")[1]["user"]
+        self.assertEqual(self.admin.call("/users/second_admin", {"version": account["version"], "enabled": 0})[0], 200)
+        self.assertTrue(self.admin.call(path)[1]["assignment"]["inactive"])
+        self.assertEqual(self.admin.call(ROOT + "/summary")[1]["workload"]["unassigned"], 1)
+        self.assertEqual(self.admin.call(path + "/assignment", {"version": 4, "operation": "claim"})[0], 200)
+        self.assertTrue(self.admin.call(path)[1]["assignment"]["mine"])
 
     def test_role_ownership_and_csrf_are_enforced(self):
         path = self.submit(materials=[material()])

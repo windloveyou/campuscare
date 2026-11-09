@@ -41,14 +41,14 @@ http.serve_forever()
         });
         browser = await chromium.launch({channel: process.env.CAMPUSCARE_BROWSER_CHANNEL || 'chrome', headless: true});
         const errors = [];
-        async function login(account, route = '') {
+        async function login(account, route = '', password = 'Campus2026!') {
             const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
             page.on('pageerror', error => errors.push(error.message));
             const bootstrap = page.waitForResponse(response => response.url() === base + '/api/bootstrap');
             await page.goto(base + '/' + route);
             await bootstrap;
             await page.locator('#account').fill(account);
-            await page.locator('#password').fill('Campus2026!');
+            await page.locator('#password').fill(password);
             await page.getByRole('button', {name: '进入工作台'}).click();
             try {
                 await page.locator('.sidebar').waitFor();
@@ -153,18 +153,40 @@ http.serve_forever()
         assert.equal(await student.locator('#as-filter-type').inputValue(), 'transcript');
 
         const admin = await login('admin');
+        const session = await (await admin.request.get(base + '/api/bootstrap')).json();
+        const created = await admin.request.post(base + '/api/users', {
+            headers: {'X-CSRF-Token': session.user.csrf},
+            data: {username: 'second_admin', name: '协作管理员', role: 'admin', password: 'Reviewer2026!'},
+        });
+        assert.equal(created.status(), 201, await created.text());
         await openPortal(admin);
-        await admin.getByRole('link', {name: '处理待审批', exact: true}).click();
+        await admin.getByRole('link', {name: '待领取 · 1', exact: true}).click();
         assert.equal(await admin.locator('#as-status').inputValue(), 'pending');
+        assert.equal(await admin.locator('#as-owner').inputValue(), 'unassigned');
         let review = await openRecord(admin, rowId);
         await review.getByText('账号登记资料', {exact: true}).waitFor();
         await review.getByText('DEMO-STUDENT-01', {exact: true}).waitFor();
         await review.getByText('UPDATED-01', {exact: true}).waitFor();
         await downloadMaterial(admin, review.getByRole('link', {name: /申请材料.png/}), png.name);
-        await decide(review, 'needs_materials', '请补交用途说明材料。');
+        await review.getByRole('button', {name: '领取经办', exact: true}).click();
+        await review.getByText('由我经办', {exact: true}).waitFor();
+        await review.locator('#as-transfer-to').selectOption('second_admin');
+        await review.locator('#as-handoff-note').fill('内部：请重点核对申请用途。');
+        await screenshot(admin, 'admin-services-collaboration.png');
+        await review.getByRole('button', {name: '转交申请', exact: true}).click();
+        await review.getByText(/此申请由其他管理员经办/).waitFor();
+        assert.equal(await review.locator('#as-decision').count(), 0);
+        await review.getByText('交接记录（2）', {exact: true}).click();
+        await review.getByText(/内部：请重点核对申请用途/).waitFor();
         await returnToRecords(admin);
         await admin.getByText('当前没有符合条件的申请。').waitFor();
 
+        const colleague = await login('second_admin', '', 'Reviewer2026!');
+        await openPortal(colleague);
+        await colleague.getByRole('link', {name: '我负责的 · 1', exact: true}).click();
+        assert.equal(await colleague.locator('#as-owner').inputValue(), 'mine');
+        await decide(await openRecord(colleague, rowId), 'needs_materials', '请补交用途说明材料。');
+        await returnToRecords(colleague);
         await student.getByRole('link', {name: '服务首页', exact: true}).click();
         const supplementMetric = student.getByRole('link', {name: /待补交材料.*查看记录/});
         await supplementMetric.getByText('1', {exact: true}).waitFor();
@@ -172,6 +194,8 @@ http.serve_forever()
         assert.equal(await student.locator('#as-status').inputValue(), 'needs_materials');
         dialog = await openRecord(student, rowId);
         await dialog.getByText('请补交用途说明材料。', {exact: true}).waitFor();
+        assert.equal(await dialog.getByText(/内部：请重点核对申请用途/).count(), 0);
+        assert.equal(await dialog.getByRole('heading', {name: '经办协作'}).count(), 0);
         await student.setViewportSize({width: 390, height: 844});
         await dialog.locator('#as-extra-files').setInputFiles({...png, name: '补交材料.png'});
         await dialog.locator('#as-supplement-note').fill('按审批意见补交。');
@@ -183,12 +207,12 @@ http.serve_forever()
         await returnToRecords(student);
         assert.equal(await student.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 
-        await admin.getByRole('button', {name: '刷新列表'}).click();
-        review = await openRecord(admin, rowId);
-        await downloadMaterial(admin, review.getByRole('link', {name: /补交材料.png/}), '补交材料.png');
-        await screenshot(admin, 'admin-services-review.png');
+        await colleague.getByRole('button', {name: '刷新列表'}).click();
+        review = await openRecord(colleague, rowId);
+        await downloadMaterial(colleague, review.getByRole('link', {name: /补交材料.png/}), '补交材料.png');
+        await screenshot(colleague, 'admin-services-review.png');
         await decide(review, 'approved', '材料已核对。');
-        await returnToRecords(admin);
+        await returnToRecords(colleague);
         await filter(student, {status: 'approved'});
         dialog = await openRecord(student, rowId);
         await dialog.getByText('审批通过', {exact: true}).waitFor();
@@ -218,7 +242,7 @@ http.serve_forever()
             await page.close();
         }
         assert.deepEqual(errors, []);
-        console.log('Browser checks passed: portal navigation, browser Back, deep links, search, metrics, preselected types, clipboard, editable profile, download, approval flow, mobile layout.');
+        console.log('Browser checks passed: portal navigation, search, reviewer queues, claim, transfer, private handoff notes, approval permissions, supplement, download, mobile layout.');
     } finally {
         if (browser) await browser.close();
         service.kill();

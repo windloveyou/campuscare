@@ -13,6 +13,8 @@ const adminServices = (function () {
     };
     const colors = {pending: 'blue', needs_materials: 'orange', approved: 'green', rejected: 'red'};
     const eventLabels = {submitted: '提交申请', supplemented: '补交材料', needs_materials: '退回补充材料', approved: '审批通过', rejected: '审批未通过'};
+    const assignmentLabels = {claimed: '领取申请', released: '交回队列', transferred: '转交同事'};
+    const openStatus = status => ['pending', 'needs_materials'].includes(status);
     const visible = user => user.role === 'admin' || (user.role === 'user' && user.identity === '学生');
     const statusBadge = (catalog, status) => `<span class="badge ${colors[status] || ''}">${esc(catalog.statuses[status])}</span>`;
     const profile = (values, keys = Object.keys(fields)) => `<dl class="as-profile">${keys.map(key =>
@@ -61,6 +63,7 @@ const adminServices = (function () {
         const status = params.get('status');
         const number = params.get('q') || '';
         const page = params.get('page') || '';
+        const owner = params.get('owner') || '';
         return {
             view, id: detail?.[1],
             query: {
@@ -68,6 +71,7 @@ const adminServices = (function () {
                 status: status === 'all' || Object.prototype.hasOwnProperty.call(colors, status) ? status : '',
                 q: /^[a-z0-9-]{1,24}$/i.test(number) ? number : '',
                 page: /^[1-9][0-9]{0,8}$/.test(page) && page !== '1' ? page : '',
+                owner: reviewer && ['mine', 'unassigned'].includes(owner) ? owner : '',
             },
         };
     }
@@ -96,7 +100,8 @@ const adminServices = (function () {
             <span class="ticket-icon">${icon('ticket')}</span><span class="as-row-main">
                 <strong>${esc(catalog.types[item.document_type])}</strong>
                 <span class="small muted">${esc(item.id)}${catalog.mode === 'student' ? '' : ` · ${esc(item.name)} / ${esc(item.student_no)}`}</span>
-                <span class="small muted">更新于 ${date(item.updated)}</span>
+                <span class="small muted">更新于 ${date(item.updated)}${catalog.mode === 'reviewer'
+                    ? (item.reviewer_id ? ' · 经办：' + esc(item.reviewer_name || item.reviewer_id) : (openStatus(item.status) ? ' · 待领取' : '')) : ''}</span>
             </span>${statusBadge(catalog, item.status)}${icon('arrow')}
         </a></li>`).join('')}</ul>`;
     }
@@ -114,7 +119,11 @@ const adminServices = (function () {
                 `<a class="stat as-metric" href="${href('records', {status: key})}"><div class="stat-top">${esc(label)}
                 <span class="stat-icon">${icon(statusIcons[key])}</span></div><div class="stat-value">${data.counts[key]}</div>
                 <div class="stat-foot">查看记录 ${icon('arrow')}</div></a>`).join('')}</div>
-            ${reviewer ? '' : `<div class="as-service-grid">${Object.entries(catalog.types).map(([key, title]) =>
+            ${reviewer ? `<section class="card as-queue-overview" aria-label="个人待办">
+                <div><h2>我的待办</h2><p class="subtitle">只统计当前待审批的申请，补交后会回到经办人队列。</p></div>
+                <div class="as-actions">${link(href('records', {status: 'pending', owner: 'mine'}), '我负责的 · ' + data.workload.mine)}
+                    ${link(href('records', {status: 'pending', owner: 'unassigned'}), '待领取 · ' + data.workload.unassigned)}</div>
+                </section>` : `<div class="as-service-grid">${Object.entries(catalog.types).map(([key, title]) =>
                 `<section class="card as-service"><div class="card-body"><span class="ticket-icon">${icon('ticket')}</span>
                 <h2>${esc(title)}</h2><p class="subtitle">${esc(docDescriptions[key])}</p>
                 ${link(href('apply', {type: key}), '申请' + esc(title) + ' ' + icon('arrow'))}</div></section>`).join('')}</div>`}
@@ -191,6 +200,11 @@ const adminServices = (function () {
                     <select id="as-filter-type" name="type"><option value="">全部类型</option>
                         ${Object.entries(catalog.types).map(([key, title]) => `<option value="${esc(key)}" ${query.type === key ? 'selected' : ''}>${esc(title)}</option>`).join('')}
                     </select></div>
+                    ${reviewer ? `<div><label for="as-owner">经办人</label>
+                    <select id="as-owner" name="owner"><option value="">全部经办人</option>
+                        <option value="mine" ${query.owner === 'mine' ? 'selected' : ''}>我负责的</option>
+                        <option value="unassigned" ${query.owner === 'unassigned' ? 'selected' : ''}>待领取</option>
+                    </select></div>` : ''}
                     <button class="btn" type="submit">查询</button>
                     ${link(href('records', {status: 'all'}), '清空筛选')}
                     <button class="btn secondary" id="as-refresh" type="button">刷新列表</button>
@@ -223,31 +237,63 @@ const adminServices = (function () {
         if (!form) return;
         form.addEventListener('submit', async event => {
             event.preventDefault();
-            const button = event.submitter || form.querySelector('[type=submit]');
+            const buttons = [...form.querySelectorAll('[type=submit]')];
+            const button = event.submitter || buttons[0];
             if (button.disabled) return;
             const error = form.querySelector('.as-error');
             const owner = $('#as-portal');
             error.textContent = '';
-            button.disabled = true;
+            buttons.forEach(control => { control.disabled = true; });
             try {
-                await submit(form.elements, () => owner?.isConnected && form.isConnected);
+                await submit(form.elements, () => owner?.isConnected && form.isConnected, button);
             } catch (err) {
                 error.textContent = err.message;
             } finally {
-                button.disabled = false;
+                buttons.forEach(control => { control.disabled = false; });
             }
         });
+    }
+
+    function assignmentCard(detail) {
+        const {reviewer, inactive, mine} = detail.assignment;
+        const open = openStatus(detail.application.status);
+        const internalEvents = detail.events.filter(event => Object.prototype.hasOwnProperty.call(assignmentLabels, event.action));
+        const choices = detail.reviewers || [];
+        return `<section class="detail-box as-detail as-assignment"><h2>经办协作</h2>
+            <p class="as-assignee">${reviewer ? `<strong>${esc(reviewer.name || reviewer.id)}</strong> <span class="small muted">(${esc(reviewer.id)})</span>
+                ${mine ? '<span class="badge green">由我经办</span>' : ''}`
+                : '<span class="badge orange">' + (open ? '待领取' : '无启用的经办人') + '</span>'}</p>
+            ${open && !reviewer ? `<p class="small muted">${inactive ? '原经办人已不可办理，其他管理员可重新领取。' : '领取后由你负责审批，也可以转交给其他管理员。'}</p>
+                <form class="as-form" id="as-assignment"><p class="error as-error" role="alert"></p>
+                    <button type="submit" class="btn secondary" value="claim">${inactive ? '重新领取' : '领取经办'}</button></form>` : ''}
+            ${open && mine ? `<form class="as-form" id="as-assignment">
+                ${choices.length ? `<label for="as-transfer-to">转交给</label><select id="as-transfer-to" name="reviewer_id"><option value="">请选择管理员</option>
+                    ${choices.map(person => `<option value="${esc(person.id)}">${esc(person.name || person.id)}（${esc(person.id)}）</option>`).join('')}</select>` : ''}
+                <label for="as-handoff-note">交接说明（选填，仅管理人员可见）</label>
+                <textarea id="as-handoff-note" name="note" maxlength="300" rows="2"></textarea>
+                <p class="error as-error" role="alert"></p><div class="as-actions">
+                    ${choices.length ? '<button type="submit" class="btn secondary" value="transfer">转交申请</button>' : ''}
+                    <button type="submit" class="btn secondary" value="release">交回待领取</button>
+                </div></form>` : ''}
+            ${open && reviewer && !mine ? '<p class="notice">此申请由其他管理员经办。需接手时，请联系当前经办人转交。</p>' : ''}
+            ${internalEvents.length ? `<details class="as-handoff-history"><summary>交接记录（${internalEvents.length}）</summary>
+                <ol class="timeline as-timeline">${internalEvents.map(event => `<li class="timeline-item">
+                    <strong>${assignmentLabels[event.action]}</strong> <span class="small muted">${esc(event.actor_id)} · ${date(event.created)}</span>
+                    <p class="as-note">${esc(event.note)}</p></li>`).join('')}</ol></details>` : ''}</section>`;
     }
 
     function applicationDetails(panel, detail, catalog, reload) {
         const {application: item, events, materials} = detail;
         const reviewer = catalog.mode === 'reviewer';
+        const assignment = detail.assignment;
+        const canDecide = reviewer && item.status === 'pending' && (!assignment.reviewer || assignment.mine);
+        const publicEvents = events.filter(event => !Object.prototype.hasOwnProperty.call(assignmentLabels, event.action));
         panel.innerHTML = `
             <div class="as-layout as-workspace"><div class="as-stack"><div class="detail-box as-detail">
             <h3>申请资料</h3>${profile(item.profile)}${reviewer ? accountComparison(detail) : ''}
             <h3>申请用途</h3><p class="as-note">${esc(item.purpose)}</p></div>
             <section class="detail-box as-detail"><h2>办理进度</h2>
-                <ol class="timeline as-timeline">${events.map(event => `<li class="timeline-item">
+                <ol class="timeline as-timeline">${publicEvents.map(event => `<li class="timeline-item">
                     <strong>${eventLabels[event.action] || esc(event.action)}</strong>
                     <div class="small muted">${date(event.created)}</div>
                     ${event.note ? `<p class="as-note">${esc(event.note)}</p>` : ''}
@@ -263,7 +309,9 @@ const adminServices = (function () {
                     rejected: '本次申请未通过，具体原因见办理记录。',
                 }[item.status])}</p>
             </section>
-            ${reviewer && item.status === 'pending' ? `<section class="detail-box as-detail"><h2>审批操作</h2>
+            ${reviewer ? assignmentCard(detail) : ''}
+            ${canDecide ? `<section class="detail-box as-detail"><h2>审批操作</h2>
+                ${!assignment.reviewer ? '<p class="small muted">直接保存审批结果也会将你登记为经办人。</p>' : ''}
                 <form class="as-form" id="as-decision">
                     <label for="as-decision-value">处理结果 *</label>
                     <select id="as-decision-value" name="decision" required><option value="">请选择处理结果</option>
@@ -296,6 +344,13 @@ const adminServices = (function () {
         };
         bindForm(decisionForm, (inputs, active) =>
             update('/decision', {decision: inputs.decision.value, note: inputs.note.value}, '已保存审批结果', active));
+        bindForm(panel.querySelector('#as-assignment'), (inputs, active, button) => {
+            const operation = button.value;
+            const reviewerId = inputs.reviewer_id?.value;
+            if (operation === 'transfer' && !reviewerId) throw new Error('请先选择要转交的管理员');
+            return update('/assignment', {operation, reviewer_id: reviewerId, note: inputs.note?.value || ''},
+                {claim: '已领取申请', release: '已交回待领取队列', transfer: '已转交申请'}[operation], active);
+        });
         bindForm(panel.querySelector('#as-supplement'), async (inputs, active) =>
             update('/materials', {note: inputs.note.value, materials: await selectedFiles(inputs.materials, catalog.materials)}, '已补交材料，申请重新进入审批', active));
     }
