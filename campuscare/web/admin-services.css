@@ -78,7 +78,7 @@
 
 .as-metrics, .as-service-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 14px;
     margin: 18px 0;
 }
@@ -210,6 +210,20 @@
 
 .as-detail-status {
     margin: 10px 0;
+}
+
+.as-cancel {
+    border-top: 1px solid var(--line);
+    margin-top: 14px;
+    padding-top: 12px;
+}
+
+.as-cancel summary {
+    cursor: pointer;
+}
+
+.as-cancel summary::-webkit-details-marker {
+    display: none;
 }
 
 .as-queue-overview {
@@ -372,6 +386,10 @@
 @media (max-width: 1100px) {
     .as-layout {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    .as-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 

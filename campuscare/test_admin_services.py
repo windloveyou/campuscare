@@ -49,8 +49,8 @@ class AssignmentMigrationTests(unittest.TestCase):
             """)
             for _ in range(2):
                 admin_services.migrate(c)
-            row = c.execute("SELECT id,purpose,version,reviewer_id FROM admin_service_applications").fetchone()
-            self.assertEqual(tuple(row), ("AS-OLD", "legacy", 4, None))
+            row = c.execute("SELECT id,purpose,version,reviewer_id,cancelled_at FROM admin_service_applications").fetchone()
+            self.assertEqual(tuple(row), ("AS-OLD", "legacy", 4, None, None))
             self.assertEqual(c.execute("SELECT note FROM admin_service_events").fetchone()[0], "legacy")
 
 
@@ -202,6 +202,54 @@ class AdminServicesTests(unittest.TestCase):
         self.assertTrue(owner.call(path)[1]["assignment"]["mine"])
         self.assertEqual(owner.call(endpoint, {"version": 5, "operation": "release"})[0], 409)
 
+    def test_student_can_cancel_open_requests_and_retains_history(self):
+        path = self.submit(materials=[material()])
+        endpoint = path + "/cancel"
+        self.assertEqual(self.admin.call(endpoint, {"version": 1})[0], 403)
+        self.assertEqual(self.student.call(endpoint, {"version": 1}, csrf=False)[0], 403)
+        self.assertEqual(self.admin.call(path + "/assignment", {"version": 1, "operation": "claim"})[0], 200)
+        self.assertEqual(self.student.call(endpoint, {"version": 1})[0], 409)
+        self.assertEqual(self.admin.call(path + "/decision", {
+            "version": 2, "decision": "needs_materials", "note": "请补交材料",
+        })[0], 200)
+        code, result = self.student.call(endpoint, {"version": 3})
+        self.assertEqual((code, result["status"], result["version"]), (200, "cancelled", 4))
+        detail = self.student.call(path)[1]
+        self.assertEqual([event["action"] for event in detail["events"]], ["submitted", "needs_materials", "cancelled"])
+        self.assertEqual(detail["application"]["status"], "cancelled")
+        self.assertEqual(len(detail["materials"]), 1)
+        self.assertEqual(self.admin.call(path)[1]["application"]["status"], "cancelled")
+        self.assertEqual(self.student.call(path + "/materials", {"version": 4, "materials": [material()]})[0], 409)
+        self.assertEqual(self.admin.call(path + "/assignment", {"version": 4, "operation": "release"})[0], 409)
+        self.assertEqual(self.student.call(endpoint, {"version": 4})[0], 409)
+        another = self.submit()
+        self.assertEqual(self.student.call(another + "/cancel", {"version": 1})[0], 200)
+        self.assertEqual(self.admin.call(another + "/decision", {"version": 2, "decision": "approved"})[0], 409)
+        self.assertEqual(self.admin.call(ROOT + "/summary")[1]["workload"], {"mine": 0, "unassigned": 0})
+        for client in (self.student, self.admin):
+            self.assertEqual(client.call(APPLICATIONS + "?status=cancelled")[1]["total"], 2)
+            self.assertEqual(client.call(APPLICATIONS + "?status=pending")[1]["total"], 0)
+            self.assertEqual(client.call(APPLICATIONS + "?status=needs_materials")[1]["total"], 0)
+            self.assertEqual(client.call(ROOT + "/summary")[1]["counts"]["cancelled"], 2)
+
+    def test_concurrent_cancellation_and_approval_are_mutually_exclusive(self):
+        path = self.submit()
+        gate = threading.Barrier(2)
+
+        def act(entry):
+            client, endpoint, body = entry
+            gate.wait(timeout=5)
+            return client.call(path + endpoint, body)[0]
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            self.assertEqual(sorted(pool.map(act, [
+                (self.student, "/cancel", {"version": 1}),
+                (self.admin, "/decision", {"version": 1, "decision": "approved"}),
+            ])), [200, 409])
+        detail = self.student.call(path)[1]
+        self.assertIn(detail["application"]["status"], ("cancelled", "approved"))
+        self.assertEqual(len(detail["events"]), 2)
+
     def test_inactive_reviewer_can_be_replaced_and_supplement_keeps_assignment(self):
         other = self.add_reviewer()
         path = self.submit()
@@ -243,12 +291,13 @@ class AdminServicesTests(unittest.TestCase):
         other.csrf = other.call("/bootstrap")[1]["user"]["csrf"]
         self.assertEqual(other.call(APPLICATIONS)[1]["applications"], [])
         self.assertEqual(other.call(ROOT + "/summary")[1], {
-            "counts": {"pending": 0, "needs_materials": 0, "approved": 0, "rejected": 0}, "recent": [],
+            "counts": {"pending": 0, "needs_materials": 0, "approved": 0, "rejected": 0, "cancelled": 0}, "recent": [],
         })
         self.assertEqual(other.call(APPLICATIONS + "?q=" + path.split("/")[-1])[1]["total"], 0)
         self.assertEqual(other.call(path)[0], 404)
         self.assertEqual(other.call(material_path)[0], 404)
         self.assertEqual(other.call(path + "/materials", {"version": 1, "materials": [material()]})[0], 404)
+        self.assertEqual(other.call(path + "/cancel", {"version": 1})[0], 404)
 
     def test_invalid_materials_leave_no_partial_records(self):
         valid = {"document_type": "enrollment", "purpose": "申请交换生"}
@@ -304,7 +353,7 @@ class AdminServicesTests(unittest.TestCase):
         for client in (self.student, self.admin):
             code, dashboard = client.call(ROOT + "/summary")
             self.assertEqual(code, 200)
-            self.assertEqual(dashboard["counts"], {"pending": 21, "needs_materials": 0, "approved": 1, "rejected": 0})
+            self.assertEqual(dashboard["counts"], {"pending": 21, "needs_materials": 0, "approved": 1, "rejected": 0, "cancelled": 0})
             self.assertEqual(len(dashboard["recent"]), 4)
             self.assertEqual(dashboard["recent"][0]["id"], paths[-1].split("/")[-1])
             self.assertEqual(dashboard["recent"][1]["id"], number)

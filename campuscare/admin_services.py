@@ -17,7 +17,9 @@ STATUSES = {
     "needs_materials": "待补交材料",
     "approved": "已通过",
     "rejected": "未通过",
+    "cancelled": "已取消",
 }
+OPEN_STATUSES = ("pending", "needs_materials")
 PROFILE_FIELDS = ("name", "student_no", "class_name", "department", "email")
 FILE_TYPES = {
     "pdf": ("application/pdf", b"%PDF-"),
@@ -33,6 +35,9 @@ APPLICATION_SOURCE = (
     " FROM admin_service_applications a LEFT JOIN users reviewer"
     " ON reviewer.id=a.reviewer_id AND reviewer.role='admin' AND reviewer.enabled=1"
 )
+# Withdrawal is recorded separately so existing workflow rows, attachments and
+# foreign keys can be kept intact when upgrading a database.
+APPLICATION_STATUS = "CASE WHEN a.cancelled_at IS NOT NULL THEN 'cancelled' ELSE a.status END"
 
 
 @dataclass(frozen=True)
@@ -72,6 +77,8 @@ def migrate(c):
     columns = {column["name"] for column in c.execute("PRAGMA table_info(admin_service_applications)")}
     if "reviewer_id" not in columns:
         c.execute("ALTER TABLE admin_service_applications ADD COLUMN reviewer_id TEXT REFERENCES users(id)")
+    if "cancelled_at" not in columns:
+        c.execute("ALTER TABLE admin_service_applications ADD COLUMN cancelled_at TEXT")
     c.execute("CREATE INDEX IF NOT EXISTS admin_service_reviewer_queue ON admin_service_applications(reviewer_id,status)")
 
 
@@ -117,7 +124,8 @@ def timestamp():
 
 def get_application(c, user, mode, app_id, Error):
     row = c.execute(
-        "SELECT * FROM admin_service_applications WHERE id=?", (app_id,)
+        "SELECT a.*, " + APPLICATION_STATUS + " AS effective_status FROM admin_service_applications a WHERE a.id=?",
+        (app_id,),
     ).fetchone()
     if row is None or (mode == "student" and row["applicant_id"] != user["id"]):
         raise Error("申请不存在或无权查看", 404)
@@ -126,6 +134,8 @@ def get_application(c, user, mode, app_id, Error):
 
 def application_view(row, mode):
     result = dict(row)
+    result["status"] = result.pop("effective_status")
+    result.pop("cancelled_at")
     result["profile"] = json.loads(result["profile"])
     if mode == "student":
         result.pop("applicant_id")
@@ -143,7 +153,7 @@ def application_rows(c, mode, where, values, limit, offset=0):
     applications = []
     reviewer_columns = ",reviewer.id AS reviewer_id,reviewer.name AS reviewer_name" if mode == "reviewer" else ""
     for row in c.execute(
-        "SELECT a.id,a.document_type,a.profile,a.status,a.created,a.updated"
+        "SELECT a.id,a.document_type,a.profile," + APPLICATION_STATUS + " AS status,a.created,a.updated"
         + reviewer_columns + APPLICATION_SOURCE + where + " ORDER BY a.updated DESC,a.id DESC LIMIT ? OFFSET ?",
         (*values, limit, offset),
     ):
@@ -171,7 +181,12 @@ def listing(c, user, mode, query, Error):
         raise Error("请输入有效的申请编号或页码")
     page = int(raw_page)
     filters, values = visible_scope(user, mode)
-    for expression, value in (("a.status=?", status), ("a.document_type=?", document_type), ("instr(a.id,?)>0", number)):
+    if status == "cancelled":
+        filters.append("a.cancelled_at IS NOT NULL")
+    elif status:
+        filters.extend(("a.status=?", "a.cancelled_at IS NULL"))
+        values.append(status)
+    for expression, value in (("a.document_type=?", document_type), ("instr(a.id,?)>0", number)):
         if value:
             filters.append(expression)
             values.append(value)
@@ -179,7 +194,7 @@ def listing(c, user, mode, query, Error):
         filters.append("a.reviewer_id=?")
         values.append(user["id"])
     elif owner == "unassigned":
-        filters.append("reviewer.id IS NULL")
+        filters.extend(("reviewer.id IS NULL", "a.cancelled_at IS NULL"))
     where = " WHERE " + " AND ".join(filters) if filters else ""
     c.execute("BEGIN")
     total = c.execute("SELECT count(*)" + APPLICATION_SOURCE + where, values).fetchone()[0]
@@ -192,14 +207,17 @@ def summary(c, user, mode):
     where = " WHERE " + " AND ".join(filters) if filters else ""
     c.execute("BEGIN")
     counts = dict.fromkeys(STATUSES, 0)
-    for row in c.execute("SELECT a.status,count(*) AS n" + APPLICATION_SOURCE + where + " GROUP BY a.status", values):
-        counts[row["status"]] = row["n"]
+    for row in c.execute(
+        "SELECT " + APPLICATION_STATUS + " AS effective_status,count(*) AS n"
+        + APPLICATION_SOURCE + where + " GROUP BY effective_status", values,
+    ):
+        counts[row["effective_status"]] = row["n"]
     result = {"counts": counts, "recent": application_rows(c, mode, where, values, 4)}
     if mode == "reviewer":
         row = c.execute(
             "SELECT count(CASE WHEN reviewer.id=? THEN 1 END) AS mine,"
             " count(CASE WHEN reviewer.id IS NULL THEN 1 END) AS unassigned"
-            + APPLICATION_SOURCE + " WHERE a.status='pending'", (user["id"],),
+            + APPLICATION_SOURCE + " WHERE a.status='pending' AND a.cancelled_at IS NULL", (user["id"],),
         ).fetchone()
         result["workload"] = dict(row)
     return result
@@ -263,7 +281,7 @@ def read(c, user, path, query, Error):
             "inactive": bool(row["reviewer_id"] and not reviewer),
             "mine": bool(reviewer and reviewer["id"] == user["id"]),
         }
-        if result["assignment"]["mine"] and row["status"] in ("pending", "needs_materials"):
+        if result["assignment"]["mine"] and row["effective_status"] in OPEN_STATUSES:
             result["reviewers"] = [dict(person) for person in c.execute(
                 "SELECT id,name FROM users WHERE role='admin' AND enabled=1 AND id<>? ORDER BY name,id",
                 (user["id"],),
@@ -323,7 +341,7 @@ def record(c, app_id, actor_id, action, note, stamp, materials=()):
 
 
 def change_assignment(c, row, user, body, stamp, Error):
-    if row["status"] not in ("pending", "needs_materials"):
+    if row["effective_status"] not in OPEN_STATUSES:
         raise Error("已结束的申请不能变更经办人", 409)
     reviewer = active_reviewer(c, row["reviewer_id"])
     operation = body.get("operation")
@@ -379,7 +397,7 @@ def write(c, user, path, body, Error):
         record(c, app_id, user["id"], "submitted", "", stamp, materials)
         return {"id": app_id, "status": "pending", "version": 1}, 201
 
-    match = re.fullmatch(PREFIX + r"/applications/([^/]+)/(decision|materials|assignment)", path)
+    match = re.fullmatch(PREFIX + r"/applications/([^/]+)/(decision|materials|assignment|cancel)", path)
     if not match:
         raise Error("接口不存在", 404)
     app_id, action = match.groups()
@@ -387,14 +405,25 @@ def write(c, user, path, body, Error):
         raise Error("仅管理员可办理审批或分配经办人", 403)
     if action == "materials" and mode != "student":
         raise Error("仅申请学生可补交材料", 403)
+    if action == "cancel" and mode != "student":
+        raise Error("仅申请学生可取消申请", 403)
     row = get_application(c, user, mode, app_id, Error)
     if type(body.get("version")) is not int or body["version"] != row["version"]:
         raise Error("申请已更新，请刷新详情后再操作", 409)
     if action == "assignment":
         return change_assignment(c, row, user, body, stamp, Error)
+    if action == "cancel":
+        if row["effective_status"] not in OPEN_STATUSES:
+            raise Error("只有待审批或待补交材料的申请可以取消", 409)
+        c.execute(
+            "UPDATE admin_service_applications SET cancelled_at=?,updated=?,version=version+1 WHERE id=?",
+            (stamp, stamp, app_id),
+        )
+        record(c, app_id, user["id"], "cancelled", "", stamp)
+        return {"id": app_id, "status": "cancelled", "version": row["version"] + 1}, 200
     reviewer_id = row["reviewer_id"]
     if action == "decision":
-        if row["status"] != "pending":
+        if row["effective_status"] != "pending":
             raise Error("只有待审批申请可以审批", 409)
         reviewer = active_reviewer(c, reviewer_id)
         if reviewer and reviewer["id"] != user["id"]:
@@ -406,7 +435,7 @@ def write(c, user, path, body, Error):
         note = text_field(body.get("note", ""), 500, "审批说明", Error, required=status != "approved")
         event, materials = status, []
     else:
-        if row["status"] != "needs_materials":
+        if row["effective_status"] != "needs_materials":
             raise Error("只有待补交材料的申请可以补交", 409)
         note = text_field(body.get("note", ""), 500, "补充说明", Error)
         materials = validate_materials(body.get("materials", []), Error, required=True)

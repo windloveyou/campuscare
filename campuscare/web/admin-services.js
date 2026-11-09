@@ -11,8 +11,8 @@ const adminServices = (function () {
         department: 'maxlength="80"',
         email: 'type="email" maxlength="254"',
     };
-    const colors = {pending: 'blue', needs_materials: 'orange', approved: 'green', rejected: 'red'};
-    const eventLabels = {submitted: '提交申请', supplemented: '补交材料', needs_materials: '退回补充材料', approved: '审批通过', rejected: '审批未通过'};
+    const colors = {pending: 'blue', needs_materials: 'orange', approved: 'green', rejected: 'red', cancelled: ''};
+    const eventLabels = {submitted: '提交申请', supplemented: '补交材料', needs_materials: '退回补充材料', approved: '审批通过', rejected: '审批未通过', cancelled: '学生取消申请'};
     const assignmentLabels = {claimed: '领取申请', released: '交回队列', transferred: '转交同事'};
     const openStatus = status => ['pending', 'needs_materials'].includes(status);
     const visible = user => user.role === 'admin' || (user.role === 'user' && user.identity === '学生');
@@ -109,7 +109,7 @@ const adminServices = (function () {
 
     function dashboard(catalog, data) {
         const reviewer = catalog.mode === 'reviewer';
-        const statusIcons = {pending: 'clock', needs_materials: 'ticket', approved: 'check', rejected: 'box'};
+        const statusIcons = {pending: 'clock', needs_materials: 'ticket', approved: 'check', rejected: 'box', cancelled: 'logout'};
         return `<section class="as-hero"><div><div class="eyebrow">STUDENT DOCUMENT SERVICES</div>
             <h2>${reviewer ? '学生申请处理中心' : '校园证明，一处办理'}</h2>
             <p>${reviewer ? '从待审批队列开始，核对申请资料并记录办理结果。' : '从提交到补交、审批，办理记录集中保存在这里。'}</p>
@@ -146,6 +146,7 @@ const adminServices = (function () {
             ['账号自动带入的资料有误怎么办？', '学生可以在新建申请时直接修改或补填。更正仅用于当前申请，管理员审批时可以核对账号登记资料。'],
             ['材料有哪些要求？', fileHelp(catalog.materials) + ' 首次提交可按需附加材料；收到补交要求后，至少提交一份。'],
             ['收到补交要求后怎么操作？', '在「我的申请」选择「待补交材料」，打开详情阅读审批意见，再上传补充材料。提交后会重新进入审批。'],
+            ['提交后可以取消吗？', '待审批或待补交材料时，可以在本人申请详情的「当前状态」下取消。取消后仍可查看记录，如需继续办理请重新申请。'],
             ['审批通过后能下载正式文件吗？', '本门户显示办理状态和审批意见。正式文件的签发和领取按学校规定办理。'],
         ];
         return `<div class="as-layout as-workspace"><section class="card"><div class="card-head"><div><h2>常见问题</h2><p>点击问题展开说明</p></div></div>
@@ -331,7 +332,16 @@ const adminServices = (function () {
                     needs_materials: reviewer ? '等待学生补交材料。' : '请阅读办理进度中的补交要求，然后上传材料。',
                     approved: '已通过审批，办理记录可继续查看。',
                     rejected: '本次申请未通过，具体原因见办理记录。',
+                    cancelled: reviewer ? '学生已取消，本次申请无需再处理。' : '本次申请已取消。如需继续办理，请重新发起申请。',
                 }[item.status])}</p>
+                ${!reviewer && openStatus(item.status) ? `<details class="as-cancel">
+                    <summary class="btn danger">取消申请</summary>
+                    <form class="as-form" id="as-cancel-form">
+                        <p>取消后将停止办理，原申请记录仍可查看。确定取消吗？</p>
+                        <p class="error as-error" role="alert"></p>
+                        <div class="as-actions"><button type="submit" class="btn danger">确认取消申请</button>
+                            <button type="button" class="btn secondary" id="as-keep-application">保留申请</button></div>
+                    </form></details>` : ''}
             </section>
             ${reviewer ? assignmentCard(detail) : ''}
             ${canDecide ? `<section class="detail-box as-detail"><h2>审批操作</h2>
@@ -377,6 +387,16 @@ const adminServices = (function () {
         });
         bindForm(panel.querySelector('#as-supplement'), async (inputs, active) =>
             update('/materials', {note: inputs.note.value, materials: await selectedFiles(inputs.materials, catalog.materials)}, '已补交材料，申请重新进入审批', active));
+        const keep = panel.querySelector('#as-keep-application');
+        if (keep) {
+            keep.onclick = () => {
+                const confirmation = keep.closest('details');
+                confirmation.open = false;
+                confirmation.querySelector('summary').focus();
+            };
+        }
+        bindForm(panel.querySelector('#as-cancel-form'), (_, active) =>
+            update('/cancel', {}, '申请已取消', active));
     }
 
     function bindDetail(portal, route, catalog) {

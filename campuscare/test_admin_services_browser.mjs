@@ -75,10 +75,11 @@ http.serve_forever()
             await page.getByRole('link', {name: /^返回(我的申请|审批工作台)$/}).click();
             await page.locator('#as-status').waitFor();
         }
-        async function filter(page, {status = '', number = '', type = ''} = {}) {
+        async function filter(page, {status = '', number = '', type = '', owner = ''} = {}) {
             await page.locator('#as-status').selectOption(status);
             await page.locator('#as-search').fill(number);
             await page.locator('#as-filter-type').selectOption(type);
+            if (await page.locator('#as-owner').count()) await page.locator('#as-owner').selectOption(owner);
             await page.getByRole('button', {name: '查询', exact: true}).click();
         }
         async function openRecord(page, id) {
@@ -226,6 +227,7 @@ http.serve_forever()
         await filter(student, {status: 'approved'});
         dialog = await openRecord(student, rowId);
         await dialog.getByText('审批通过', {exact: true}).waitFor();
+        assert.equal(await dialog.locator('.as-cancel').count(), 0);
 
         await student.getByRole('link', {name: '服务首页', exact: true}).click();
         await student.getByRole('link', {name: '申请在校证明', exact: true}).click();
@@ -245,6 +247,29 @@ http.serve_forever()
         await direct.getByRole('heading', {name: '在校证明申请'}).waitFor();
         await direct.close();
 
+        await student.getByRole('navigation', {name: '行政服务导航'}).getByRole('link', {name: '新建申请'}).click();
+        await student.locator('#as-type').selectOption('transcript');
+        dialog = await submit(student, '验证取消申请');
+        const cancelledId = await student.locator('#as-detail-id').textContent();
+        const cancelToggle = dialog.locator('.as-cancel summary');
+        await cancelToggle.click();
+        await dialog.getByRole('button', {name: '保留申请'}).click();
+        assert.equal(await dialog.getByRole('button', {name: '确认取消申请'}).isVisible(), false);
+        await dialog.getByText('待审批', {exact: true}).waitFor();
+        await cancelToggle.click();
+        await dialog.getByRole('button', {name: '确认取消申请'}).click();
+        await dialog.getByText('已取消', {exact: true}).waitFor();
+        await dialog.getByText('学生取消申请', {exact: true}).waitFor();
+        assert.equal(await dialog.locator('.as-cancel').count(), 0);
+        await returnToRecords(student);
+        await filter(student, {status: 'cancelled'});
+        await student.locator(`[data-as-id="${cancelledId}"]`).waitFor();
+        await returnToRecords(admin);
+        await filter(admin, {status: 'cancelled'});
+        review = await openRecord(admin, cancelledId);
+        await review.getByText('学生取消申请', {exact: true}).waitFor();
+        assert.equal(await review.locator('#as-decision').count(), 0);
+
         for (const account of ['teacher', 'tech']) {
             const page = await login(account, '#admin-services/detail/' + enrollmentId);
             assert.equal(await page.getByRole('button', {name: '行政服务', exact: true}).count(), 0);
@@ -252,7 +277,7 @@ http.serve_forever()
             await page.close();
         }
         assert.deepEqual(errors, []);
-        console.log('Browser checks passed: role-specific guides, shared footer removed, reviewer queues, claim, transfer, approval, supplement, download, mobile layout.');
+        console.log('Browser checks passed: role-specific guides, reviewer collaboration, approval, supplement, cancellation confirmation and history, downloads, mobile layout.');
     } finally {
         if (browser) await browser.close();
         service.kill();
