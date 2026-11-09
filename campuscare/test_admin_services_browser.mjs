@@ -109,11 +109,14 @@ http.serve_forever()
             }
         }
 
-        const visitor = await browser.newPage({viewport: {width: 1440, height: 960}});
+        const visitor = await browser.newPage({viewport: {width: 1440, height: 960}, reducedMotion: 'reduce'});
         visitor.on('pageerror', error => errors.push(error.message));
         await visitor.goto(base);
         await visitor.getByRole('heading', {name: /校园服务，.*从这里开始/}).waitFor();
         await visitor.waitForFunction(() => Array.from(document.querySelectorAll('.campus-photo')).every(photo => photo.complete && photo.naturalWidth > 0));
+        await visitor.getByRole('button', {name: '播放轮播'}).click();
+        await visitor.getByRole('button', {name: '暂停轮播'}).click();
+        assert.equal(await visitor.locator('.ribbon [data-public-service]').count(), 6);
         await screenshot(visitor, 'campus-portal-public.png');
         await visitor.getByRole('button', {name: '下一张校园照片'}).click();
         assert.equal(await visitor.locator('.campus-photo.active').getAttribute('src'), '/uow-science.webp');
@@ -123,9 +126,14 @@ http.serve_forever()
         await visitor.waitForFunction(() => getComputedStyle(document.querySelector('.campus-photo.active')).opacity === '1');
         await visitor.setViewportSize({width: 390, height: 844});
         assert.equal(await visitor.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+        await visitor.getByRole('button', {name: '打开菜单'}).click();
+        await visitor.getByRole('navigation', {name: '网站导航'}).getByRole('link', {name: '校园相册'}).click();
+        assert.equal(await visitor.getByRole('button', {name: '打开菜单'}).getAttribute('aria-expanded'), 'false');
+        assert.equal(await visitor.locator('#campus-gallery .gallery-item').count(), 3);
+        await visitor.evaluate(() => window.scrollTo(0, 0));
         await screenshot(visitor, 'campus-portal-public-mobile.png');
         await visitor.getByRole('button', {name: '证明与申请', exact: true}).click();
-        assert.equal(await visitor.locator('#public-services .service-tile').count(), 2);
+        assert.equal(await visitor.locator('#public-services .class-card').count(), 2);
         await visitor.locator('#public-services article').filter({hasText: '成绩单申请'}).getByRole('button', {name: '办理入口'}).click();
         await visitor.getByText('登录后将打开：成绩单申请', {exact: true}).waitFor();
         await visitor.getByRole('button', {name: '进入工作台'}).click();

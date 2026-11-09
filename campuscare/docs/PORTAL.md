@@ -12,14 +12,17 @@
 
 | 文件 | 职责 |
 | --- | --- |
-| `web/workspace.js`、`web/portal.css` | 公开首页、服务目录、角色导航、运营和师生首页、服务搜索与网站视觉 |
+| `web/landing.js`、`web/little-wonders.css` | 基于 Little Wonders 源码的公开首页、照片轮播与相册、登录表单及移动端菜单 |
+| `web/workspace.js`、`web/portal.css` | 服务配置、角色导航、运营和师生首页、服务搜索与工作区视觉 |
 | `web/app.js` | 会话、登录后直达、路由和页面装载。通用路径为 `#campus/<page>`；设施二维码仍支持 `?asset=<id>` |
 | `web/ui.js` | 通用格式化、图标、抽屉和提示 |
 | `web/facilities.js` | 设施业务页面、报修草稿、地图和维修操作 |
 | `web/admin-services.js` | 行政业务页面，保留 `#admin-services` 路径和原接口 |
 | `server.py` | 提供本地页面资源，继续校验各业务接口的权限 |
 
-首页参考[模板王的演示](https://www.mobanwang.com/mb/demo/23175/)，自行实现布局和交互。校园照片由 Wikimedia Commons 提供，按 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) 使用。下列副本转换为 WebP，前两张缩小到 1920 像素宽，轮播按屏幕比例裁切；图片副本继续使用原许可。首页每张照片均显示来源与许可链接。
+首页基于 [uiuxlabz 的 Little Wonders GitHub 源码](https://github.com/uiuxlabz/kids-daycare-html-template/tree/ec899dd5d60b9d4b2255e71de5156bb33254d6ee) 改造；其 README 允许个人及商业使用，署名可选。沿用原模板的顶栏、导航、轮播、快捷栏、图文分栏、卡片、表单和相册样式；替换演示内容、图片和模拟表单，接入 CampusCare 已有业务。第三方样式限定在公开首页，未引入模板原有的外链字体或外部请求。
+
+校园照片由 Wikimedia Commons 提供，按 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) 使用。下列副本转换为 WebP，前两张缩小到 1920 像素宽，轮播按屏幕比例裁切；图片副本继续使用原许可。首页轮播与相册显示来源与许可链接。
 
 - `uow-mckinnon.webp`：[伍伦贡大学麦金农楼](https://commons.wikimedia.org/wiki/File:Uni_of_Wollongong_McKinnon_building.JPG)，JVPurvis。
 - `uow-science.webp`：[伍伦贡大学科学楼群](https://commons.wikimedia.org/wiki/File:Uni_of_Wollongong_Science_buildings.JPG)，JVPurvis。

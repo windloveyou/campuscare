@@ -30,14 +30,6 @@ const workspace = (function () {
         {key: 'review', group: 'staff', icon: 'grid', tag: '管理人员', title: '审批工作区', desc: '管理待办、领取经办、审批和交接申请。', target: paths.review, role: 'admin'},
         {key: 'maintenance', group: 'staff', icon: 'tool', tag: '维修人员', title: '维修工作区', desc: '查看指派的工单，记录维修进度并提交验收。', target: '#campus/tickets', role: 'technician'},
     ];
-    const categories = [['all', '全部服务'], ['documents', '证明与申请'], ['campus', '校园设施'], ['staff', '员工工作区']];
-    const photos = [
-        ['uow-mckinnon.webp', '麦金农楼', 'JVPurvis', 'Uni_of_Wollongong_McKinnon_building.JPG'],
-        ['uow-science.webp', '科学楼群', 'JVPurvis', 'Uni_of_Wollongong_Science_buildings.JPG'],
-        ['uow-smart.webp', 'SMART 基础设施研究楼', 'Nikita Sergey', 'UOW_Smart_Infrastructure_Facility.jpg'],
-    ];
-    const photoSource = file => 'https://commons.wikimedia.org/wiki/File:' + file;
-    const demo = {user: 'student', technician: 'tech', admin: 'admin'};
     const campusUrl = id => '#campus/' + id;
     const supports = u => u.role === 'admin' || (u.role === 'user' && u.identity === '学生');
     const titleOf = (id, user) => id === 'tickets' && user.role === 'technician' ? '我的维修任务' : items[id]?.[1] || '工作台';
@@ -59,102 +51,12 @@ const workspace = (function () {
     const action = (route, title, style = 'btn') => `<button type="button" class="${style}" data-route="${esc(route)}">${title}</button>`;
     const linkArrow = () => ` ${icon('arrow')}`;
 
-    function serviceCards(services, publicMode = false) {
+    function serviceCards(services) {
         return services.map(item => `<article class="service-tile tone-${item.group}">
             <div class="service-tile-top"><span class="service-glyph">${icon(item.icon)}</span><span class="service-category">${item.tag}</span></div>
             <h3>${item.title}</h3><p>${item.desc}</p>
-            ${publicMode ? `<button type="button" class="service-link" data-public-service="${item.key}">办理入口${linkArrow()}</button>`
-                : action(item.target, '办理入口' + linkArrow(), 'service-link')}
+            ${action(item.target, '办理入口' + linkArrow(), 'service-link')}
         </article>`).join('');
-    }
-
-    function publicCatalog(active = 'all') {
-        return serviceCards(catalog.filter(item => active === 'all' || item.group === active), true);
-    }
-
-    function landing(role, pending) {
-        const selected = catalog.find(item => item.key === pending);
-        const title = {user: '校园账号登录', admin: '运营人员登录', technician: '维修人员登录'}[role];
-        return `<div class="public-site"><header class="public-header"><div class="site-container public-bar">
-            <a class="site-brand" href="#site-top" aria-label="CampusCare 校园服务首页">${brand()}</a>
-            <nav aria-label="网站导航"><a href="#service-catalog">服务目录</a><a href="#using-campuscare">使用方式</a></nav>
-            <button type="button" class="btn secondary public-signin" data-public-focus>校园账号登录 ${icon('arrow')}</button>
-        </div></header>
-        <main id="site-top" class="public-main">
-            <section class="public-story" aria-label="伍伦贡大学校园照片轮播">
-                <div class="campus-photo-stack">${photos.map(([file, label], i) => `<img src="/${file}" alt="伍伦贡大学${label}"
-                    class="campus-photo ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}" ${i === 0 ? 'fetchpriority="high"' : 'decoding="async"'}>`).join('')}</div>
-                <div class="site-container public-story-inner"><div class="public-story-copy"><span class="editorial-label"><i></i> SMARTCAMPUS · CAMPUS SERVICES</span>
-                    <h1>校园服务，<br>从这里开始。</h1>
-                    <p>在线申请校园证明、查找设施和跟进报修。每项事务都有清楚的入口和办理进度。</p>
-                    <div class="as-actions"><a class="btn campus-primary" href="#service-catalog">浏览服务目录 ${icon('arrow')}</a>
-                        <button type="button" class="btn campus-quiet" data-public-focus>登录办理</button></div></div>
-                    <div class="photo-toolbar"><div class="photo-credit" aria-live="polite"><span>伍伦贡大学校园实景</span>
-                        <a id="campus-photo-credit" href="${photoSource(photos[0][3])}" target="_blank" rel="noopener">麦金农楼 · JVPurvis</a>
-                        <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC BY-SA 3.0</a></div>
-                        <div class="photo-controls"><button type="button" data-slide-step="-1" aria-label="上一张校园照片">‹</button>
-                            <div class="photo-dots">${photos.map(([, label], i) => `<button type="button" data-slide-index="${i}" aria-label="查看${label}" aria-pressed="${i === 0}"></button>`).join('')}</div>
-                            <button type="button" data-slide-step="1" aria-label="下一张校园照片">›</button></div></div>
-                </div>
-            </section>
-            <div class="site-container public-body">
-            <div class="public-intro" id="campus-account">
-                <section class="public-intro-copy"><span class="editorial-label"><i></i> YOUR CAMPUS, CONNECTED</span>
-                    <h2>从校园生活出发，<br>让每件事都有回应。</h2>
-                    <p>CampusCare 是 SmartCampus 的课程演示。师生、维修人员和管理人员登录同一入口，按身份进入各自的服务与工作区。</p>
-                    <a href="#using-campuscare" class="service-link">了解使用方式 ${icon('arrow')}</a>
-                    <p class="public-photo-note">首页实景照片用于展示伍伦贡大学校园。服务、地图和账号为课程演示，与大学官方系统无关。</p>
-                </section>
-                <section class="login-form sign-in-card" id="campus-signin" aria-label="校园账号登录">
-                    <div class="sign-in-mark">${icon('users')}</div>
-                    <h2>${title}</h2><p class="subtitle">${selected ? '登录后将打开：' + selected.title : '选择身份，用校园账号进入对应服务。'}</p>
-                    <div class="role-pills" role="group" aria-label="选择登录身份">${[['user', '学生 / 老师'], ['technician', '维修人员'], ['admin', '管理人员']].map(([key, label]) => `<button type="button" class="role-pill ${role === key ? 'active' : ''}" data-role="${key}" aria-pressed="${role === key}">${label}</button>`).join('')}</div>
-                    <form id="login-form">
-                        <label for="account">用户名 / 邮箱</label>
-                        <input id="account" list="demo-accounts" value="${demo[role]}" autocomplete="username" placeholder="用户名或注册邮箱" required>
-                        <datalist id="demo-accounts">${['student','teacher','tech','plumber','it','admin'].map(id => `<option value="${id}"></option>`).join('')}</datalist>
-                        <label for="password">密码</label><div class="sign-in-secret"><input id="password" type="password" value="Campus2026!" autocomplete="current-password" required>
-                            <button type="button" id="password-visibility" class="linkbtn" aria-pressed="false">显示</button></div>
-                        <p id="login-error" class="error" role="alert"></p>
-                        <button class="btn" type="submit">进入工作台 ${icon('arrow')}</button>
-                    </form>
-                    <div class="sign-in-links"><button type="button" class="linkbtn" id="register-link">没有账号？注册</button><button type="button" class="linkbtn" id="reset-link">忘记密码？</button></div>
-                    <details class="demo-access"><summary>演示账号说明</summary><p>学生 student · 教师 teacher · 维修 tech · 管理 admin<br>演示密码：Campus2026!</p></details>
-                </section>
-            </div>
-            <section class="public-directory" id="service-catalog" aria-labelledby="catalog-heading">
-                <div class="editorial-head"><div><span class="editorial-label"><i></i> SERVICE DIRECTORY</span><h2 id="catalog-heading">找到你要办的事</h2><p>按类别浏览服务，选择入口后登录即可办理。</p></div>
-                <div class="directory-tabs" role="group" aria-label="服务分类">${categories.map(([key, label]) => `<button type="button" data-public-filter="${key}" aria-pressed="${key === 'all'}">${label}</button>`).join('')}</div></div>
-                <div class="service-grid" id="public-services" aria-live="polite">${publicCatalog()}</div>
-            </section>
-            <section class="public-steps" id="using-campuscare"><div><span class="editorial-label"><i></i> HOW IT WORKS</span><h2>从提交到办结</h2><p>登录后会按你的身份展示可办理的服务与记录。</p></div>
-                <ol><li><span>01</span><strong>找到服务</strong><p>按类别选择证明、报修或校园导览。</p></li>
-                <li><span>02</span><strong>提交事项</strong><p>核对资料，填写用途或问题，按需上传材料。</p></li>
-                <li><span>03</span><strong>跟进进度</strong><p>在申请或工单详情中查看处理结果。</p></li></ol>
-            </section>
-            </div></main></div>`;
-    }
-
-    function bindGallery() {
-        const root = $('.public-story');
-        if (!root) return;
-        const pictures = [...root.querySelectorAll('.campus-photo')];
-        const dots = [...root.querySelectorAll('[data-slide-index]')];
-        const credit = root.querySelector('#campus-photo-credit');
-        let current = 0;
-        function show(next) {
-            current = (next + photos.length) % photos.length;
-            pictures.forEach((image, index) => {
-                image.classList.toggle('active', index === current);
-                image.setAttribute('aria-hidden', index !== current);
-                dots[index].setAttribute('aria-pressed', index === current);
-            });
-            const [, label, author, file] = photos[current];
-            credit.textContent = label + ' · ' + author;
-            credit.href = photoSource(file);
-        }
-        root.querySelectorAll('[data-slide-step]').forEach(button => button.onclick = () => show(current + Number(button.dataset.slideStep)));
-        dots.forEach((button, index) => button.onclick = () => show(index));
     }
 
     function shell(user, current) {
@@ -322,6 +224,6 @@ const workspace = (function () {
         input.focus();
     }
 
-    return {allowed, campusUrl, landing, publicCatalog, catalog, shell, bindHome, openCommand, bindGallery,
+    return {allowed, campusUrl, catalog, shell, bindHome, openCommand,
         home: state => state.user.role === 'admin' ? adminHome(state) : membersHome(state)};
 })();

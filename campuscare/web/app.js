@@ -81,8 +81,8 @@ function head(title, subtitle, action = '') {
 }
 
 function renderLogin() {
-    $('#app').innerHTML = workspace.landing(loginRole, requestedService);
-    workspace.bindGallery?.();
+    $('#app').innerHTML = publicLanding.render(loginRole, requestedService);
+    publicLanding.bind();
     $('#register-link').onclick = () => renderAuth('register');
     $('#reset-link').onclick = () => renderAuth('reset');
     $('#password-visibility').onclick = event => {
@@ -126,6 +126,7 @@ function openProfile() {
 
 function render() {
     if (!state) return renderLogin();
+    publicLanding.unbind();
     const user = state.user;
     if (!workspace.allowed(user, page)) page = 'overview';
     $('#app').innerHTML = workspace.shell(user, page);
@@ -170,7 +171,7 @@ document.addEventListener('click', async event => {
             focusLogin();
         } else if (d.publicFilter) {
             $$('[data-public-filter]').forEach(button => button.setAttribute('aria-pressed', button === target));
-            $('#public-services').innerHTML = workspace.publicCatalog(d.publicFilter);
+            $('#public-services').innerHTML = publicLanding.cards(d.publicFilter);
         } else if (d.publicService) {
             const service = workspace.catalog.find(item => item.key === d.publicService);
             if (!service) return;
