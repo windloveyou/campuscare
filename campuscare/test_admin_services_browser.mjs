@@ -109,10 +109,32 @@ http.serve_forever()
             }
         }
 
+        const motionVisitor = await browser.newPage({viewport: {width: 1440, height: 960}, reducedMotion: 'no-preference'});
+        motionVisitor.on('pageerror', error => errors.push(error.message));
+        await motionVisitor.goto(base);
+        await motionVisitor.getByRole('heading', {name: 'GCU 校园服务', exact: true}).waitFor();
+        await motionVisitor.locator('.ribbon.motion-revealed').waitFor();
+        assert.equal(await motionVisitor.locator('.campus-photo.active').getAttribute('src'), '/gcu-quadrangle.webp');
+        await motionVisitor.waitForFunction(() => document.querySelector('.campus-photo.active')?.getAttribute('src') === '/gcu-learning-commons.webp', null, {timeout: 9000});
+        await motionVisitor.getByRole('button', {name: '下一张校园照片'}).click();
+        await motionVisitor.locator('.public-site.gallery-playing .campus-photo.active[src="/gcu-campus-walk.webp"]').waitFor();
+        await motionVisitor.getByRole('button', {name: '暂停轮播'}).click();
+        assert.equal(await motionVisitor.locator('.public-site.gallery-playing').count(), 0);
+        const animatedCard = motionVisitor.locator('#public-services .class-card').first();
+        await animatedCard.hover();
+        await motionVisitor.waitForFunction(() => {
+            const image = document.querySelector('#public-services .class-card:hover .class-img');
+            return image && getComputedStyle(image).transform !== 'none';
+        });
+        await motionVisitor.close();
+
         const visitor = await browser.newPage({viewport: {width: 1440, height: 960}, reducedMotion: 'reduce'});
         visitor.on('pageerror', error => errors.push(error.message));
         await visitor.goto(base);
-        await visitor.getByRole('heading', {name: /校园服务，.*从这里开始/}).waitFor();
+        await visitor.getByRole('heading', {name: 'GCU 校园服务', exact: true}).waitFor();
+        await visitor.getByRole('heading', {name: '校园服务概览', exact: true}).waitFor();
+        assert.equal(await visitor.getByText('演示账号说明', {exact: true}).count(), 0);
+        assert.equal(await visitor.locator('.motion-revealed').count(), 0);
         await visitor.waitForFunction(() => Array.from(document.querySelectorAll('.campus-photo')).every(photo => photo.complete && photo.naturalWidth > 0));
         const campusImages = ['/gcu-quadrangle.webp', '/gcu-learning-commons.webp', '/gcu-campus-walk.webp'];
         assert.deepEqual(await visitor.locator('.campus-photo').evaluateAll(images => images.map(image => image.getAttribute('src'))), campusImages);
@@ -134,9 +156,18 @@ http.serve_forever()
         assert.equal(await visitor.getByRole('button', {name: '打开菜单'}).getAttribute('aria-expanded'), 'false');
         assert.deepEqual(await visitor.locator('#campus-gallery .gallery-item').evaluateAll(links => links.map(link => link.getAttribute('href'))), campusImages);
         await visitor.getByRole('heading', {name: /走进.*GCU 校园/}).waitFor();
+        const photoLink = visitor.getByRole('link', {name: '查看中央庭院大图'});
+        await photoLink.click();
+        const viewer = visitor.getByRole('dialog');
+        await viewer.getByRole('heading', {name: '中央庭院'}).waitFor();
+        await visitor.keyboard.press('ArrowRight');
+        await viewer.getByRole('heading', {name: '共享学习空间'}).waitFor();
+        await visitor.keyboard.press('Escape');
+        await viewer.waitFor({state: 'detached'});
+        assert.equal(await photoLink.evaluate(link => document.activeElement === link), true);
         await visitor.evaluate(() => window.scrollTo(0, 0));
         await screenshot(visitor, 'campus-portal-public-mobile.png');
-        await visitor.getByRole('button', {name: '证明与申请', exact: true}).click();
+        await visitor.getByRole('button', {name: '行政服务', exact: true}).click();
         assert.equal(await visitor.locator('#public-services .class-card').count(), 2);
         await visitor.locator('#public-services article').filter({hasText: '成绩单申请'}).getByRole('button', {name: '办理入口'}).click();
         await visitor.getByText('登录后将打开：成绩单申请', {exact: true}).waitFor();
@@ -145,7 +176,8 @@ http.serve_forever()
         await visitor.close();
 
         const student = await login('student');
-        await student.getByRole('heading', {name: '你的校园服务门户'}).waitFor();
+        await student.getByRole('heading', {name: '学生服务'}).waitFor();
+        await student.locator('#content.motion-page').waitFor();
         await screenshot(student, 'campus-portal-student-home.png');
         await student.keyboard.press('Control+k');
         await student.locator('#command-query').fill('用户管理');
@@ -154,7 +186,7 @@ http.serve_forever()
         await student.locator('#command-query').press('Enter');
         assert.equal(await student.locator('#as-type').inputValue(), 'enrollment');
         await student.goBack();
-        await student.getByRole('heading', {name: '你的校园服务门户'}).waitFor();
+        await student.getByRole('heading', {name: '学生服务'}).waitFor();
         await openPortal(student);
         await student.getByText('暂无办理记录。').waitFor();
         await screenshot(student, 'admin-services-student.png');

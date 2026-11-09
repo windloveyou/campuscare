@@ -202,7 +202,7 @@ try {
         height: 844
     });
     await page.reload();
-    await page.getByRole('heading', {name: '你的校园服务门户'}).waitFor();
+    await page.getByRole('heading', {name: '学生服务'}).waitFor();
     await page.screenshot({
         path: 'artifacts/dashboard-mobile.png',
         fullPage: false

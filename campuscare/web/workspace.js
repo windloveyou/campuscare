@@ -84,8 +84,8 @@ const workspace = (function () {
         return `<div class="member-home">
             <section class="member-hero"><div class="campus-art" aria-hidden="true"></div><div class="member-hero-copy">
                 <span class="editorial-label"><i></i>${tech ? '维修工作区' : 'GCU 校园服务'}</span>
-                <h1>${tech ? '维修任务中心' : '你的校园服务门户'}</h1>
-                <p>${tech ? '查看已指派的工单，记录维修进度，提交验收。' : '把常用服务、申请进度与报修放在一起。'}</p>
+                <h1>${tech ? '维修任务中心' : student ? '学生服务' : '教师服务'}</h1>
+                <p>${tech ? '维修工单 · 维修进度 · 验收提交' : student ? '行政服务 · 校园报修 · 设施查询' : '校园报修 · 设施查询'}</p>
                 <div class="as-actions">${student ? action(paths.transcript, '申请成绩单' + linkArrow(), 'btn campus-primary')
                     : action(campusUrl(tech ? 'tickets' : 'report'), (tech ? '查看维修任务' : '发起报修') + linkArrow(), 'btn campus-primary')}
                     ${student ? action(paths.requests, '查看申请', 'btn campus-quiet') : action(campusUrl('map'), '打开校园地图', 'btn campus-quiet')}</div>
@@ -110,7 +110,7 @@ const workspace = (function () {
         const unassigned = active.filter(item => item.status === 'pending').length;
         const inspections = s.inspections.filter(item => item.status === 'pending').length;
         return `<div class="operations-home"><section class="operations-hero"><div><span class="editorial-label"><i></i> GCU OPERATIONS</span>
-            <h1>校园运营总览</h1><p>把审批、报修和巡检的待办集中到一处。</p></div>
+            <h1>校园运营总览</h1><p>行政审批 · 维修工单 · 巡检任务</p></div>
             ${action(paths.review, '进入审批队列' + linkArrow(), 'btn campus-primary')}</section>
             <div class="operations-metrics">
                 <div id="workspace-summary" aria-live="polite"><p class="muted">正在读取审批队列…</p></div>

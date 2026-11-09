@@ -549,9 +549,6 @@
   .sign-in-secret { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 9px; }
   .sign-in-secret .linkbtn { padding: 10px; font-weight: 700; }
   .sign-in-links { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .demo-access { border-top: 1px solid var(--clr-line); margin-top: 16px; padding-top: 13px; font-size: .9rem; }
-  .demo-access summary { cursor: pointer; color: #216961; }
-  .demo-access p { margin-top: 7px; }
   .campus-gallery-card { min-width: 0; }
   .campus-gallery-card figcaption { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 11px; font-size: .82rem; }
   @media (max-width: 992px) {

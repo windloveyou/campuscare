@@ -30,6 +30,7 @@ function clearSession() {
     state = null;
     page = 'overview';
     requestedService = '';
+    portalMotion.resetPage();
     facilities.reset();
     if (typeof clearUsersView === 'function') clearUsersView();
     $('#service-command')?.close();
@@ -83,6 +84,7 @@ function head(title, subtitle, action = '') {
 function renderLogin() {
     $('#app').innerHTML = publicLanding.render(loginRole, requestedService);
     publicLanding.bind();
+    portalMotion.watchPublic($('.public-site'));
     $('#register-link').onclick = () => renderAuth('register');
     $('#reset-link').onclick = () => renderAuth('reset');
     $('#password-visibility').onclick = event => {
@@ -127,6 +129,7 @@ function openProfile() {
 function render() {
     if (!state) return renderLogin();
     publicLanding.unbind();
+    portalMotion.leavePublic();
     const user = state.user;
     if (!workspace.allowed(user, page)) page = 'overview';
     $('#app').innerHTML = workspace.shell(user, page);
@@ -145,6 +148,7 @@ function render() {
         facilities.bind();
     }
     $('#content h1')?.setAttribute('tabindex', '-1');
+    portalMotion.enterPage(content, `${user.id}:${page}:${location.hash}`);
     $('#profile-button').onclick = openProfile;
     if (user.role === 'admin') $('#mail-settings-button').onclick = openMailSettings;
 }
@@ -172,6 +176,7 @@ document.addEventListener('click', async event => {
         } else if (d.publicFilter) {
             $$('[data-public-filter]').forEach(button => button.setAttribute('aria-pressed', button === target));
             $('#public-services').innerHTML = publicLanding.cards(d.publicFilter);
+            portalMotion.watchPublic($('.public-site'));
         } else if (d.publicService) {
             const service = workspace.catalog.find(item => item.key === d.publicService);
             if (!service) return;

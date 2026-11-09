@@ -16,6 +16,7 @@
 | `web/workspace.js`、`web/portal.css` | 服务配置、角色导航、运营和师生首页、服务搜索与工作区视觉 |
 | `web/app.js` | 会话、登录后直达、路由和页面装载。通用路径为 `#campus/<page>`；设施二维码仍支持 `?asset=<id>` |
 | `web/ui.js` | 通用格式化、图标、抽屉和提示 |
+| `web/motion.js`、`web/motion.css` | 首页分区入场、工作区切换、卡片与弹窗反馈；尊重减少动态效果设置 |
 | `web/facilities.js` | 设施业务页面、报修草稿、地图和维修操作 |
 | `web/admin-services.js` | 行政业务页面，保留 `#admin-services` 路径和原接口 |
 | `server.py` | 提供本地页面资源，继续校验各业务接口的权限 |
@@ -23,6 +24,8 @@
 首页基于 [uiuxlabz 的 Little Wonders GitHub 源码](https://github.com/uiuxlabz/kids-daycare-html-template/tree/ec899dd5d60b9d4b2255e71de5156bb33254d6ee) 改造；其 README 允许个人及商业使用，署名可选。沿用原模板的顶栏、导航、轮播、快捷栏、图文分栏、卡片、表单和相册样式；替换演示内容、图片和模拟表单，接入 CampusCare 已有业务。第三方样式限定在公开首页，未引入模板原有的外链字体或外部请求。
 
 首页校园图景为本项目生成的场景图，均以虚拟 GCU 为背景。图片转换成 WebP 本地提供；轮播和服务卡片按屏幕比例裁切。站内将这些场景标记为概念图。
+
+普通动效模式下，首页轮播默认每 5.5 秒切换；提供播放、暂停及手动切换。校园图景可在站内放大，支持方向键切换和 Esc 关闭。开启减少动态效果时不自动播放。
 
 - `gcu-quadrangle.webp`：中央庭院与教学楼。
 - `gcu-learning-commons.webp`：学生在共享学习空间合作。

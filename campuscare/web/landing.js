@@ -6,7 +6,7 @@ const publicLanding = (function () {
         ['gcu-learning-commons.webp', '共享学习空间', '来自不同背景的学生在明亮的学习空间共同讨论'],
         ['gcu-campus-walk.webp', '校园步道', '学生沿林荫步道穿行于教学楼之间'],
     ];
-    const categories = [['all', '全部服务'], ['documents', '证明与申请'], ['campus', '校园设施'], ['staff', '员工工作区']];
+    const categories = [['all', '全部服务'], ['documents', '行政服务'], ['campus', '设施与资源'], ['staff', '人员工作区']];
     const demo = {user: 'student', technician: 'tech', admin: 'admin'};
     const servicePhotos = {transcript: 0, enrollment: 1, report: 2, map: 1, review: 2, maintenance: 0};
     let dispose = () => {};
@@ -29,7 +29,7 @@ const publicLanding = (function () {
         const title = {user: '校园账号登录', admin: '运营人员登录', technician: '维修人员登录'}[role];
         return `<section class="section section-coral" id="campus-account">
             <div class="container">
-                <div class="section-head"><p class="eyebrow">CAMPUS ACCOUNT</p><h2 class="section-title">用校园账号<em>登录办理</em></h2></div>
+                <div class="section-head"><h2 class="section-title">账号登录</h2></div>
                 <div class="form-wrap login-form" id="campus-signin" aria-label="校园账号登录">
                     <h2 class="login-title">${title}</h2><p class="subtitle">${selected ? '登录后将打开：' + selected.title : '选择身份，进入你的服务与工作区。'}</p>
                     <div class="role-pills" role="group" aria-label="选择登录身份">
@@ -47,7 +47,6 @@ const publicLanding = (function () {
                     </form>
                     <div class="sign-in-links"><button type="button" class="linkbtn" id="register-link">没有账号？注册</button>
                     <button type="button" class="linkbtn" id="reset-link">忘记密码？</button></div>
-                    <details class="demo-access"><summary>演示账号说明</summary><p>学生 student · 教师 teacher · 维修 tech · 管理 admin<br>演示密码：Campus2026!</p></details>
                 </div>
             </div></section>`;
     }
@@ -80,9 +79,9 @@ const publicLanding = (function () {
                         class="campus-photo ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}" ${i === 0 ? 'fetchpriority="high"' : 'decoding="async"'}>`).join('')}</div>
                     <div class="hero-shade" aria-hidden="true"></div>
                     <div class="container hero-copy"><div class="hero-text">
-                        <p class="eyebrow">SMARTCAMPUS · 校园服务</p>
-                        <h1 class="hero-title">校园服务，<br><em>从这里开始。</em></h1>
-                        <p class="hero-sub">从成绩单和在校证明，到设施查询和报修，一个入口就能找到要办的事。</p>
+                        <p class="eyebrow">GLOBALCONNECT UNIVERSITY</p>
+                        <h1 class="hero-title">GCU <em>校园服务</em></h1>
+                        <p class="hero-sub">行政服务 · 设施与资源管理</p>
                         <div class="hero-actions"><a href="#service-catalog" class="btn btn-primary">浏览服务 ${icon('arrow')}</a>
                             <button type="button" class="btn btn-ghost-light" data-public-focus>登录办理</button></div>
                         </div>
@@ -107,19 +106,17 @@ const publicLanding = (function () {
                         <img src="/${photos[1][0]}" alt="${photos[1][2]}" class="split-photo" loading="lazy">
                         <div class="split-badge"><span class="split-badge-num">GCU</span><span class="split-badge-label">共享学习空间</span></div>
                     </div><div class="split-copy">
-                        <p class="eyebrow">关于 SmartCampus</p>
-                        <h2 class="section-title">把校园事务<em>集中到一个入口</em></h2>
-                        <p>CampusCare 是为虚拟的 GlobalConnect University（GCU）设计的校园服务门户。不同身份共用一个登录入口，进入各自的服务与工作区。</p>
-                        <ul class="check-list"><li>学生在线提交证明申请，随时查看审批进度</li>
-                            <li>师生按楼栋和设施提交报修，跟进维修结果</li>
-                            <li>管理人员和维修人员登录各自的工作区</li></ul>
+                        <h2 class="section-title">校园服务<em>概览</em></h2>
+                        <p>GlobalConnect University（GCU）</p>
+                        <ul class="check-list"><li>行政服务：成绩单申请、在校证明申请、申请进度查询</li>
+                            <li>设施与资源管理：校园地图、设施查询、在线报修</li>
+                            <li>运营管理：行政审批、工单派发、设施巡检</li></ul>
                         <a href="#campus-gallery" class="btn btn-ghost-dark">浏览校园图景 ${icon('arrow')}</a>
                     </div></div>
                 </div></section>
                 <section class="section service-directory" id="service-catalog" aria-labelledby="catalog-heading">
-                    <div class="container"><div class="section-head"><p class="eyebrow">CAMPUS SERVICES</p>
-                        <h2 class="section-title" id="catalog-heading">找到<em>你要办的事</em></h2>
-                        <p>按类别筛选，选择服务后登录即可办理。</p></div>
+                    <div class="container"><div class="section-head">
+                        <h2 class="section-title" id="catalog-heading">校园<em>服务目录</em></h2></div>
                         <div class="directory-tabs" role="group" aria-label="服务分类">${categories.map(([key, label]) =>
             `<button type="button" data-public-filter="${key}" aria-pressed="${key === 'all'}">${label}</button>`).join('')}</div>
                         <div class="class-grid" id="public-services" aria-live="polite">${cards()}</div>
@@ -127,13 +124,62 @@ const publicLanding = (function () {
                 ${account(role, pending)}
                 <section class="section section-cream" id="campus-gallery"><div class="container">
                     <div class="section-head"><p class="eyebrow">CAMPUS GALLERY</p><h2 class="section-title">走进<em>GCU 校园</em></h2>
-                        <p>为本项目生成的校园概念图。点击图片查看大图。</p></div>
-                    <div class="gallery-grid">${photos.map(([file, title, description]) => `<figure class="campus-gallery-card">
-                        <a href="/${file}" class="gallery-item" target="_blank" rel="noopener" aria-label="查看${title}大图">
+                        <p>为本项目生成的校园概念图。点击图片可放大并切换场景。</p></div>
+                    <div class="gallery-grid">${photos.map(([file, title, description], index) => `<figure class="campus-gallery-card">
+                        <a href="/${file}" class="gallery-item" target="_blank" rel="noopener" data-campus-viewer="${index}" aria-label="查看${title}大图">
                         <img src="/${file}" alt="${description}" loading="lazy"></a>
                         <figcaption>${title}</figcaption></figure>`).join('')}</div>
                 </div></section>
             </main></div>`;
+    }
+
+    function openViewer(root, selected, trigger) {
+        if (root.querySelector('.campus-viewer')) return;
+        const viewer = document.createElement('dialog');
+        viewer.className = 'campus-viewer';
+        viewer.setAttribute('aria-labelledby', 'campus-viewer-title');
+        viewer.innerHTML = `<div class="viewer-bar">
+            <div><p class="viewer-kicker">GCU 校园图景</p><h2 id="campus-viewer-title"></h2></div>
+            <button type="button" class="viewer-icon viewer-close" aria-label="关闭大图">×</button>
+        </div>
+        <div class="viewer-stage"></div>
+        <div class="viewer-bar viewer-footer"><p class="viewer-count" aria-live="polite"></p>
+            <div class="viewer-actions"><button type="button" class="viewer-icon viewer-prev" aria-label="大图上一张">‹</button>
+                <button type="button" class="viewer-icon viewer-next" aria-label="大图下一张">›</button></div>
+        </div>`;
+        let index = selected;
+        const show = step => {
+            index = (index + step + photos.length) % photos.length;
+            const [file, title, description] = photos[index];
+            viewer.querySelector('h2').textContent = title;
+            viewer.querySelector('.viewer-count').textContent = `${index + 1} / ${photos.length}`;
+            const image = new Image();
+            image.src = '/' + file;
+            image.alt = description;
+            viewer.querySelector('.viewer-stage').replaceChildren(image);
+        };
+        viewer.querySelector('.viewer-close').onclick = () => viewer.close();
+        viewer.querySelector('.viewer-prev').onclick = () => show(-1);
+        viewer.querySelector('.viewer-next').onclick = () => show(1);
+        viewer.addEventListener('keydown', event => {
+            if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+                event.preventDefault();
+                show(event.key === 'ArrowLeft' ? -1 : 1);
+            }
+        });
+        viewer.addEventListener('click', event => {
+            if (event.target !== viewer) return;
+            const box = viewer.getBoundingClientRect();
+            if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) viewer.close();
+        });
+        viewer.addEventListener('close', () => {
+            viewer.remove();
+            trigger.focus({preventScroll: true});
+        }, {once: true});
+        root.append(viewer);
+        show(0);
+        viewer.showModal();
+        viewer.querySelector('.viewer-close').focus();
     }
 
     function bind() {
@@ -145,6 +191,7 @@ const publicLanding = (function () {
         const dots = [...root.querySelectorAll('[data-slide-index]')];
         const caption = root.querySelector('#campus-photo-caption');
         const pause = root.querySelector('.gallery-play');
+        const controls = root.querySelector('.photo-controls');
         const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
         const toggle = root.querySelector('.nav-toggle');
         const links = root.querySelector('.nav-links');
@@ -160,21 +207,29 @@ const publicLanding = (function () {
         }
         function play(active) {
             playing = active;
+            root.classList.toggle('gallery-playing', active);
             clearInterval(timer);
             pause.textContent = playing ? 'Ⅱ' : '▷';
             pause.setAttribute('aria-label', playing ? '暂停轮播' : '播放轮播');
             if (playing) timer = setInterval(() => {
-                if (root.isConnected && !document.hidden) show(current + 1);
-            }, 7000);
+                if (root.isConnected && !document.hidden && !root.querySelector('.campus-viewer[open]')
+                    && !controls.matches(':hover') && !controls.contains(document.activeElement)) show(current + 1);
+            }, 5500);
         }
         root.querySelectorAll('[data-slide-step]').forEach(button => button.addEventListener('click', () => {
-            play(false);
             show(current + Number(button.dataset.slideStep));
+            play(playing);
         }, opts));
-        dots.forEach((button, index) => button.addEventListener('click', () => { play(false); show(index); }, opts));
+        dots.forEach((button, index) => button.addEventListener('click', () => { show(index); play(playing); }, opts));
         pause.addEventListener('click', () => play(!playing), opts);
         motion.addEventListener('change', e => { if (e.matches) play(false); }, opts);
         play(playing);
+        root.querySelector('#campus-gallery').addEventListener('click', event => {
+            const link = event.target.closest('[data-campus-viewer]');
+            if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+            event.preventDefault();
+            openViewer(root, Number(link.dataset.campusViewer), link);
+        }, opts);
 
         function setMenu(open) {
             links.classList.toggle('open', open);
