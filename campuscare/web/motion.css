@@ -109,7 +109,7 @@
     .public-site .class-img { transition: transform 420ms var(--motion-emphasized); }
     .public-site .class-card:is(:hover,:focus-within) .class-img { transform: scale(1.055); }
     .public-site .ribbon-icon { transition: transform var(--motion-standard) var(--motion-emphasized); }
-    .public-site .ribbon-item:is(:hover,:focus-visible) .ribbon-icon { transform: translateY(-3px); }
+    .public-site .ribbon-item:is(:hover,:focus-visible) .ribbon-icon { transform: translateY(-4px) rotate(-6deg); }
     .public-site :is(.directory-tabs button,.ribbon-item,.viewer-icon),
     .workspace-shell :is(.navitem,.btn,.workspace-search,.workspace-logout,.as-nav a,.as-row,.as-metric,
         .workspace-metric,.operations-link,.service-tile),

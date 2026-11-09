@@ -265,12 +265,6 @@
     display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
     text-align: center; padding: 0.4rem 0.2rem;
   }
-  .ribbon-icon {
-    width: 58px; height: 58px; border-radius: 50%;
-    display: grid; place-items: center;
-    background: var(--clr-coral-soft);
-    font-size: 1.6rem;
-  }
   .ribbon-label {
     font-family: var(--ff-display); font-weight: 700;
     font-size: 0.85rem; color: var(--clr-ink);
@@ -379,12 +373,15 @@
   .btn-primary:hover { background: #ed6e51; color: #211714; }
   .section-title em { font-style: normal; }
   .ribbon-section { padding: clamp(16px, 3vw, 32px) 0 12px; }
-  .ribbon-item { border-radius: var(--radius-sm); }
-  .ribbon-item:hover { background: var(--clr-coral-soft); }
-  .ribbon-icon { color: #ad422c; }
-  .ribbon-item:nth-child(3n+2) .ribbon-icon { background: var(--clr-teal-soft); color: #216961; }
-  .ribbon-item:nth-child(3n) .ribbon-icon { background: var(--clr-gold-soft); color: #86500f; }
-  .ribbon-icon .icon { width: 23px; height: 23px; }
+  .ribbon-item {
+    --shortcut-tint: #fbebe4;
+    padding: .65rem .3rem; border: 1px solid #45392b0b; border-radius: 16px;
+    background: linear-gradient(160deg, var(--shortcut-tint), #fff 94%);
+  }
+  .ribbon-item:nth-child(3n+2) { --shortcut-tint: #e5f2ea; }
+  .ribbon-item:nth-child(3n) { --shortcut-tint: #fcf1d9; }
+  .ribbon-item:nth-child(5) { --shortcut-tint: #eeebf8; }
+  .ribbon-item:is(:hover,:focus-visible) { background: var(--shortcut-tint); border-color: #45392b26; }
   .split-photo { aspect-ratio: 6 / 5; }
   .section-title em { color: #ad472f; }
   .section-head > p { margin-top: 12px; }
@@ -408,13 +405,11 @@
     padding: .24rem .63rem; background: #1c262dbd; color: #fff;
     font-size: .75rem; font-weight: 700; font-variant-numeric: tabular-nums;
   }
-  .section-marker, .class-symbol {
-    display: inline-grid; place-items: center; flex: none;
-    width: 44px; height: 44px; border-radius: 13px;
-    background: var(--clr-coral-soft); color: #a83e2a;
-  }
-  .section-marker { margin-bottom: 14px; }
-  .section-marker .icon, .class-symbol .icon { width: 21px; height: 21px; }
+  .section-marker, .class-symbol, .ribbon-icon { display: inline-block; flex: none; }
+  .welcome-icon { display: block; width: 100%; height: 100%; }
+  .section-marker { width: 68px; height: 68px; vertical-align: top; }
+  .ribbon-icon { width: 58px; height: 58px; }
+  .class-symbol { width: 43px; height: 43px; }
   #using-campuscare {
     background: radial-gradient(ellipse at 0 85%, #f1e4d2, transparent 42%),
                 radial-gradient(ellipse at 98% 15%, #e2efea, transparent 34%), var(--clr-cream);
@@ -423,6 +418,8 @@
     overflow: hidden; border-radius: var(--radius); box-shadow: var(--shadow-md);
   }
   .split-photo { border-radius: 0; box-shadow: none; }
+  .split-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .campus-doodle { width: clamp(85px, 12vw, 152px); flex: none; }
   .service-directory {
     background:
       radial-gradient(ellipse at left 35%, #f7e4d660, transparent 42%),
@@ -435,8 +432,6 @@
   .class-index { position: absolute; right: 1rem; top: 1rem; }
   .class-title-row { display: flex; align-items: center; gap: 11px; margin-bottom: 10px; }
   .class-title-row .class-name { margin: 0; }
-  .class-symbol { width: 36px; height: 36px; background: var(--card-tint); color: var(--card-accent); }
-  .class-symbol .icon { width: 18px; height: 18px; }
   .class-actions {
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
     gap: 9px; padding-top: .95rem; border-top: 1px solid var(--clr-line);
@@ -447,7 +442,9 @@
     font-size: .78rem; font-weight: 700;
   }
   .class-audience .icon { width: 14px; height: 14px; }
-  #campus-gallery .section-marker { color: #216961; background: var(--clr-teal-soft); }
+  #service-catalog { padding-bottom: clamp(24px, 2.8vw, 38px); }
+  #campus-gallery { padding-top: clamp(24px, 2.6vw, 36px); }
+  #campus-gallery .section-head { margin-bottom: clamp(24px, 3vw, 36px); }
   .gallery-play { padding: .5rem .7rem; margin-top: .35rem; }
   .gallery-grid {
     grid-template: repeat(2, minmax(0, 1fr)) / minmax(0, 1.55fr) minmax(0, 1fr);
@@ -480,6 +477,7 @@
     .section:not(.ribbon-section) { padding: 3.2rem 0; }
     .ribbon { padding: .85rem; gap: .55rem; }
     .ribbon-icon { width: 44px; height: 44px; }
+    .section-marker { width: 58px; height: 58px; }
     .gallery-grid { grid-template: none / minmax(0, 1fr); height: auto; }
     .campus-gallery-card { aspect-ratio: 16 / 10; }
     .campus-gallery-card:first-child { grid-row: auto; }
