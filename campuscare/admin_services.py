@@ -123,36 +123,57 @@ def application_view(row, mode):
     return result
 
 
-def listing(c, user, mode, query, Error):
-    status = query.get("status", [""])[0]
-    raw_page = query.get("page", ["1"])[0]
-    if (status and status not in STATUSES) or not re.fullmatch(r"[1-9][0-9]{0,8}", raw_page):
-        raise Error("查询条件无效")
-    page = int(raw_page)
-    filters, values = [], []
+def visible_scope(user, mode):
     if mode == "student":
-        filters.append("applicant_id=?")
-        values.append(user["id"])
-    if status:
-        filters.append("status=?")
-        values.append(status)
-    where = " WHERE " + " AND ".join(filters) if filters else ""
-    # Count and page are read from the same snapshot.
-    c.execute("BEGIN")
-    total = c.execute("SELECT count(*) FROM admin_service_applications" + where, values).fetchone()[0]
-    rows = c.execute(
+        return ["applicant_id=?"], [user["id"]]
+    return [], []
+
+
+def application_rows(c, mode, where, values, limit, offset=0):
+    applications = []
+    for row in c.execute(
         "SELECT id,document_type,profile,status,created,updated FROM admin_service_applications"
         + where + " ORDER BY updated DESC,id DESC LIMIT ? OFFSET ?",
-        (*values, PAGE_SIZE, (page - 1) * PAGE_SIZE),
-    )
-    applications = []
-    for row in rows:
+        (*values, limit, offset),
+    ):
         item = dict(row)
         snapshot = json.loads(item.pop("profile"))
         if mode == "reviewer":
             item.update(name=snapshot["name"], student_no=snapshot["student_no"])
         applications.append(item)
+    return applications
+
+
+def listing(c, user, mode, query, Error):
+    status = query.get("status", [""])[0]
+    document_type = query.get("type", [""])[0]
+    number = query.get("q", [""])[0].strip().upper()
+    raw_page = query.get("page", ["1"])[0]
+    if (status and status not in STATUSES) or (document_type and document_type not in TYPES):
+        raise Error("查询条件无效")
+    if not re.fullmatch(r"[1-9][0-9]{0,8}", raw_page) or not re.fullmatch(r"[A-Z0-9-]{0,24}", number):
+        raise Error("请输入有效的申请编号或页码")
+    page = int(raw_page)
+    filters, values = visible_scope(user, mode)
+    for expression, value in (("status=?", status), ("document_type=?", document_type), ("instr(id,?)>0", number)):
+        if value:
+            filters.append(expression)
+            values.append(value)
+    where = " WHERE " + " AND ".join(filters) if filters else ""
+    c.execute("BEGIN")
+    total = c.execute("SELECT count(*) FROM admin_service_applications" + where, values).fetchone()[0]
+    applications = application_rows(c, mode, where, values, PAGE_SIZE, (page - 1) * PAGE_SIZE)
     return {"applications": applications, "total": total, "page": page, "page_size": PAGE_SIZE}
+
+
+def summary(c, user, mode):
+    filters, values = visible_scope(user, mode)
+    where = " WHERE " + " AND ".join(filters) if filters else ""
+    c.execute("BEGIN")
+    counts = dict.fromkeys(STATUSES, 0)
+    for row in c.execute("SELECT status,count(*) AS n FROM admin_service_applications" + where + " GROUP BY status", values):
+        counts[row["status"]] = row["n"]
+    return {"counts": counts, "recent": application_rows(c, mode, where, values, 4)}
 
 
 def read(c, user, path, query, Error):
@@ -166,6 +187,8 @@ def read(c, user, path, query, Error):
         }
     if path == PREFIX + "/applications":
         return listing(c, user, mode, query, Error)
+    if path == PREFIX + "/summary":
+        return summary(c, user, mode)
     match = re.fullmatch(PREFIX + r"/applications/([^/]+)(?:/materials/([^/]+))?", path)
     if not match:
         raise Error("接口不存在", 404)

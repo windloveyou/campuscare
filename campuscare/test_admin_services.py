@@ -127,7 +127,7 @@ class AdminServicesTests(unittest.TestCase):
         self.assertEqual(self.student.call(second_path + "/materials/" + material_path.split("/")[-1])[0], 404)
         for uid in ("teacher", "tech"):
             denied = self.login(uid)
-            for resource in (ROOT + "/catalog", APPLICATIONS, path, material_path):
+            for resource in (ROOT + "/catalog", ROOT + "/summary", APPLICATIONS, path, material_path):
                 self.assertEqual(denied.call(resource)[0], 403)
             self.assertEqual(denied.call(APPLICATIONS, {})[0], 403)
         anon = Client(self.base)
@@ -144,6 +144,10 @@ class AdminServicesTests(unittest.TestCase):
         self.assertEqual(other.call("/login", {"id": "student_other", "password": "Student2026!"})[0], 200)
         other.csrf = other.call("/bootstrap")[1]["user"]["csrf"]
         self.assertEqual(other.call(APPLICATIONS)[1]["applications"], [])
+        self.assertEqual(other.call(ROOT + "/summary")[1], {
+            "counts": {"pending": 0, "needs_materials": 0, "approved": 0, "rejected": 0}, "recent": [],
+        })
+        self.assertEqual(other.call(APPLICATIONS + "?q=" + path.split("/")[-1])[1]["total"], 0)
         self.assertEqual(other.call(path)[0], 404)
         self.assertEqual(other.call(material_path)[0], 404)
         self.assertEqual(other.call(path + "/materials", {"version": 1, "materials": [material()]})[0], 404)
@@ -184,14 +188,28 @@ class AdminServicesTests(unittest.TestCase):
 
     def test_status_filter_and_pagination(self):
         paths = [self.submit() for _ in range(21)]
+        enrollment = self.submit(document_type="enrollment")
         self.assertEqual(self.admin.call(paths[-1] + "/decision", {"version": 1, "decision": "approved"})[0], 200)
         first = self.student.call(APPLICATIONS + "?page=1")[1]
         second = self.student.call(APPLICATIONS + "?page=2")[1]
-        self.assertEqual((first["total"], len(first["applications"]), len(second["applications"])), (21, 20, 1))
-        self.assertEqual(second["applications"][0]["id"], paths[0].split("/")[-1])
-        self.assertEqual(self.admin.call(APPLICATIONS + "?status=pending")[1]["total"], 20)
+        self.assertEqual((first["total"], len(first["applications"]), len(second["applications"])), (22, 20, 2))
+        self.assertEqual(second["applications"][-1]["id"], paths[0].split("/")[-1])
+        self.assertEqual(self.admin.call(APPLICATIONS + "?status=pending")[1]["total"], 21)
         self.assertEqual(self.student.call(APPLICATIONS + "?status=approved")[1]["total"], 1)
         self.assertEqual(self.student.call(APPLICATIONS + "?status=missing")[0], 400)
+        number = enrollment.split("/")[-1]
+        code, filtered = self.student.call(APPLICATIONS + "?status=pending&type=enrollment&q=" + number.lower())
+        self.assertEqual(code, 200)
+        self.assertEqual([item["id"] for item in filtered["applications"]], [number])
+        self.assertEqual(self.student.call(APPLICATIONS + "?type=transcript&q=" + number)[1]["total"], 0)
+        self.assertEqual(self.student.call(APPLICATIONS + "?q=%25")[0], 400)
+        for client in (self.student, self.admin):
+            code, dashboard = client.call(ROOT + "/summary")
+            self.assertEqual(code, 200)
+            self.assertEqual(dashboard["counts"], {"pending": 21, "needs_materials": 0, "approved": 1, "rejected": 0})
+            self.assertEqual(len(dashboard["recent"]), 4)
+            self.assertEqual(dashboard["recent"][0]["id"], paths[-1].split("/")[-1])
+            self.assertEqual(dashboard["recent"][1]["id"], number)
 
     def test_upgrade_only_renames_matching_demo_accounts(self):
         placeholder = "旧演示称呼"

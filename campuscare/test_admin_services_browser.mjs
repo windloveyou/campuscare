@@ -41,11 +41,11 @@ http.serve_forever()
         });
         browser = await chromium.launch({channel: process.env.CAMPUSCARE_BROWSER_CHANNEL || 'chrome', headless: true});
         const errors = [];
-        async function login(account) {
+        async function login(account, route = '') {
             const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
             page.on('pageerror', error => errors.push(error.message));
             const bootstrap = page.waitForResponse(response => response.url() === base + '/api/bootstrap');
-            await page.goto(base);
+            await page.goto(base + '/' + route);
             await bootstrap;
             await page.locator('#account').fill(account);
             await page.locator('#password').fill('Campus2026!');
@@ -60,16 +60,31 @@ http.serve_forever()
         }
         async function openPortal(page) {
             await page.getByRole('button', {name: '行政服务', exact: true}).click();
-            await page.locator('#as-status').waitFor();
+            await page.getByRole('heading', {name: '最近办理', exact: true}).waitFor();
         }
-        async function submit(page, type, purpose, files = []) {
-            await page.locator('#as-type').selectOption(type);
+        async function submit(page, purpose, files = []) {
             await page.locator('#as-purpose').fill(purpose);
             if (files.length) await page.locator('#as-files').setInputFiles(files);
             await page.getByRole('button', {name: '提交申请', exact: true}).click();
-            const dialog = page.getByRole('dialog');
-            await dialog.getByText('提交申请', {exact: true}).waitFor();
-            return dialog;
+            const detail = page.locator('#as-detail-body');
+            await detail.getByText('提交申请', {exact: true}).waitFor();
+            return detail;
+        }
+        async function returnToRecords(page) {
+            await page.getByRole('link', {name: /^返回(我的申请|审批工作台)$/}).click();
+            await page.locator('#as-status').waitFor();
+        }
+        async function filter(page, {status = '', number = '', type = ''} = {}) {
+            await page.locator('#as-status').selectOption(status);
+            await page.locator('#as-search').fill(number);
+            await page.locator('#as-filter-type').selectOption(type);
+            await page.getByRole('button', {name: '查询', exact: true}).click();
+        }
+        async function openRecord(page, id) {
+            await page.locator(`[data-as-id="${id}"]`).click();
+            const detail = page.locator('#as-detail-body');
+            await detail.getByText('办理进度', {exact: true}).waitFor();
+            return detail;
         }
         async function decide(dialog, decision, note) {
             await dialog.locator('#as-decision-value').selectOption(decision);
@@ -94,11 +109,20 @@ http.serve_forever()
 
         const student = await login('student');
         await openPortal(student);
+        await student.getByText('暂无办理记录。').waitFor();
+        await screenshot(student, 'admin-services-student.png');
+        await student.getByRole('link', {name: '查看办理指南', exact: true}).click();
+        await student.getByText('材料有哪些要求？', {exact: true}).click();
+        await student.getByText(/首次提交可按需附加材料/).waitFor();
+        assert.match(student.url(), /#admin-services\/guide$/);
+        await student.goBack();
+        await student.getByRole('link', {name: '申请成绩单', exact: true}).click();
         const number = student.getByLabel('学号 *', {exact: true});
         await number.waitFor();
         assert.equal(await number.inputValue(), 'DEMO-STUDENT-01');
-        await student.getByText('当前没有符合条件的申请。').waitFor();
-        await screenshot(student, 'admin-services-student.png');
+        assert.equal(await student.locator('#as-type').inputValue(), 'transcript');
+        assert.match(student.url(), /#admin-services\/apply\?type=transcript$/);
+        await screenshot(student, 'admin-services-apply.png');
 
         const profileEdits = {
             name: '申请人更正', student_no: 'UPDATED-01', class_name: '申请测试班',
@@ -107,33 +131,46 @@ http.serve_forever()
         for (const [field, value] of Object.entries(profileEdits)) {
             await student.locator('#as-profile-' + field).fill(value);
         }
-        let dialog = await submit(student, 'transcript', '实习申请 <script>测试</script>', [png]);
+        let dialog = await submit(student, '实习申请 <script>测试</script>', [png]);
         for (const value of Object.values(profileEdits)) {
             await dialog.getByText(value, {exact: true}).waitFor();
         }
         await dialog.getByText('实习申请 <script>测试</script>', {exact: true}).waitFor();
         await dialog.getByText('待审批', {exact: true}).waitFor();
-        const rowId = await student.locator('[data-as-id]').first().getAttribute('data-as-id');
-        await student.keyboard.press('Escape');
-        assert.equal(await number.inputValue(), 'DEMO-STUDENT-01');
+        const rowId = await student.locator('#as-detail-id').textContent();
+        assert.match(student.url(), /#admin-services\/detail\/AS-[0-9A-F]+$/);
+        await student.reload();
+        await student.getByRole('heading', {name: '成绩单申请'}).waitFor();
+        await student.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+        await student.getByRole('button', {name: '复制编号'}).click();
+        await student.getByText('申请编号已复制', {exact: true}).waitFor();
+        assert.equal(await student.evaluate(() => navigator.clipboard.readText()), rowId);
+        await returnToRecords(student);
+        await filter(student, {status: 'pending', number: rowId.toLowerCase(), type: 'transcript'});
+        dialog = await openRecord(student, rowId);
+        await returnToRecords(student);
+        assert.equal(await student.locator('#as-search').inputValue(), rowId.toLowerCase());
+        assert.equal(await student.locator('#as-filter-type').inputValue(), 'transcript');
 
         const admin = await login('admin');
         await openPortal(admin);
+        await admin.getByRole('link', {name: '处理待审批', exact: true}).click();
         assert.equal(await admin.locator('#as-status').inputValue(), 'pending');
-        await admin.locator(`[data-as-id="${rowId}"]`).click();
-        let review = admin.getByRole('dialog');
+        let review = await openRecord(admin, rowId);
         await review.getByText('账号登记资料', {exact: true}).waitFor();
         await review.getByText('DEMO-STUDENT-01', {exact: true}).waitFor();
         await review.getByText('UPDATED-01', {exact: true}).waitFor();
         await downloadMaterial(admin, review.getByRole('link', {name: /申请材料.png/}), png.name);
         await decide(review, 'needs_materials', '请补交用途说明材料。');
-        await admin.keyboard.press('Escape');
+        await returnToRecords(admin);
         await admin.getByText('当前没有符合条件的申请。').waitFor();
 
-        await student.getByRole('button', {name: '刷新列表'}).click();
-        await student.getByText('待补交材料', {exact: true}).last().waitFor();
-        await student.locator(`[data-as-id="${rowId}"]`).click();
-        dialog = student.getByRole('dialog');
+        await student.getByRole('link', {name: '服务首页', exact: true}).click();
+        const supplementMetric = student.getByRole('link', {name: /待补交材料.*查看记录/});
+        await supplementMetric.getByText('1', {exact: true}).waitFor();
+        await supplementMetric.click();
+        assert.equal(await student.locator('#as-status').inputValue(), 'needs_materials');
+        dialog = await openRecord(student, rowId);
         await dialog.getByText('请补交用途说明材料。', {exact: true}).waitFor();
         await student.setViewportSize({width: 390, height: 844});
         await dialog.locator('#as-extra-files').setInputFiles({...png, name: '补交材料.png'});
@@ -143,38 +180,45 @@ http.serve_forever()
         await dialog.getByRole('button', {name: '提交补充材料'}).click();
         await dialog.getByText('按审批意见补交。', {exact: true}).waitFor();
         await dialog.getByText('待审批', {exact: true}).waitFor();
-        await student.keyboard.press('Escape');
+        await returnToRecords(student);
         assert.equal(await student.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
 
         await admin.getByRole('button', {name: '刷新列表'}).click();
-        await admin.locator(`[data-as-id="${rowId}"]`).click();
-        review = admin.getByRole('dialog');
+        review = await openRecord(admin, rowId);
         await downloadMaterial(admin, review.getByRole('link', {name: /补交材料.png/}), '补交材料.png');
         await screenshot(admin, 'admin-services-review.png');
         await decide(review, 'approved', '材料已核对。');
-        await admin.keyboard.press('Escape');
-        await student.locator('#as-status').selectOption('approved');
-        await student.locator(`[data-as-id="${rowId}"]`).click();
-        await student.getByRole('dialog').getByText('审批通过', {exact: true}).waitFor();
-        await student.keyboard.press('Escape');
+        await returnToRecords(admin);
+        await filter(student, {status: 'approved'});
+        dialog = await openRecord(student, rowId);
+        await dialog.getByText('审批通过', {exact: true}).waitFor();
 
-        dialog = await submit(student, 'enrollment', '奖学金申请');
-        await dialog.getByRole('heading', {name: '在校证明申请'}).waitFor();
-        await student.keyboard.press('Escape');
+        await student.getByRole('link', {name: '服务首页', exact: true}).click();
+        await student.getByRole('link', {name: '申请在校证明', exact: true}).click();
+        await number.waitFor();
+        assert.equal(await number.inputValue(), 'DEMO-STUDENT-01');
+        assert.equal(await student.locator('#as-type').inputValue(), 'enrollment');
+        dialog = await submit(student, '奖学金申请');
+        await student.getByRole('heading', {name: '在校证明申请'}).waitFor();
+        const enrollmentId = await student.locator('#as-detail-id').textContent();
+        await returnToRecords(student);
         await admin.getByRole('button', {name: '刷新列表'}).click();
-        await admin.getByRole('button', {name: /在校证明/}).click();
-        await decide(admin.getByRole('dialog'), 'rejected', '请通过所属学院办理。');
-        await student.locator('#as-status').selectOption('rejected');
-        await student.getByRole('button', {name: /在校证明/}).click();
-        await student.getByRole('dialog').getByText('请通过所属学院办理。', {exact: true}).waitFor();
+        await decide(await openRecord(admin, enrollmentId), 'rejected', '请通过所属学院办理。');
+        await filter(student, {status: 'rejected'});
+        await (await openRecord(student, enrollmentId)).getByText('请通过所属学院办理。', {exact: true}).waitFor();
+
+        const direct = await login('student', '#admin-services/detail/' + enrollmentId);
+        await direct.getByRole('heading', {name: '在校证明申请'}).waitFor();
+        await direct.close();
 
         for (const account of ['teacher', 'tech']) {
-            const page = await login(account);
+            const page = await login(account, '#admin-services/detail/' + enrollmentId);
             assert.equal(await page.getByRole('button', {name: '行政服务', exact: true}).count(), 0);
+            assert.equal(await page.locator('#as-detail-body').count(), 0);
             await page.close();
         }
         assert.deepEqual(errors, []);
-        console.log('Browser checks passed: editable applicant profile, account comparison, downloads, return, supplement, approval, rejection, role navigation, mobile layout.');
+        console.log('Browser checks passed: portal navigation, browser Back, deep links, search, metrics, preselected types, clipboard, editable profile, download, approval flow, mobile layout.');
     } finally {
         if (browser) await browser.close();
         service.kill();

@@ -110,6 +110,14 @@ async function refresh() {
 }
 
 function go(p) {
+    if (p === 'admin-services' && adminServices.visible(state.user) && location.hash !== adminServices.homeHref) {
+        location.hash = adminServices.homeHref;
+        return;
+    }
+    if (p !== 'admin-services' && adminServices.isPortalHash()) {
+        history.pushState(null, '', location.pathname + location.search);
+    }
+    closeDrawer();
     page = p;
     filters = {
         search: '',
@@ -142,7 +150,9 @@ function renderLogin() {
             });
             await refresh();
             const asset = new URLSearchParams(location.search).get('asset');
-            if (asset) {
+            if (adminServices.visible(state.user) && adminServices.isPortalHash()) {
+                page = 'admin-services';
+            } else if (asset) {
                 draft.asset_id = state.assets.some(a => a.id === asset) ? asset : '';
                 page = 'report';
             } else page = 'overview';
@@ -615,6 +625,7 @@ document.addEventListener('click', async e => {
         } else if (b.dataset.action === 'logout') {
             await api('/logout', {});
             state = null;
+            if (adminServices.isPortalHash()) history.replaceState(null, '', location.pathname + location.search);
             clearPrivateDraft();
             closeDrawer();
             renderLogin();
@@ -649,11 +660,23 @@ document.addEventListener('keydown', e => {
 $('#modal-root').addEventListener('click', e => {
     if (e.target.classList.contains('drawer-backdrop')) closeDrawer();
 });
+window.addEventListener('hashchange', () => {
+    if (!state) return;
+    const inPortal = adminServices.visible(state.user) && adminServices.isPortalHash();
+    if (!inPortal && page !== 'admin-services') return;
+    closeDrawer();
+    page = inPortal ? 'admin-services' : 'overview';
+    render();
+    window.scrollTo(0, 0);
+    $('#as-page-title')?.focus({preventScroll: true});
+});
 (async () => {
     try {
         await refresh();
         const asset = new URLSearchParams(location.search).get('asset');
-        if (asset) {
+        if (adminServices.visible(state.user) && adminServices.isPortalHash()) {
+            page = 'admin-services';
+        } else if (asset) {
             draft.asset_id = state.assets.some(a => a.id === asset) ? asset : '';
             page = 'report';
         }

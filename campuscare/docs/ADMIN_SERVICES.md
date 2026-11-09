@@ -2,9 +2,9 @@
 
 ## 演示
 
-1. 用 `student` 登录，进入「行政服务」。姓名、学号、班级、院系和邮箱会自动带入，可按需修改或补填。选择成绩单或在校证明，填写用途并提交。首次申请可附 PDF、PNG 或 JPG；每次最多 3 份，每份最多 2 MiB。
-2. 在另一个浏览器窗口用 `admin` 登录，打开「行政服务 → 申请审批」。可以核对本次填写的资料；与账号登记不同时会显示对应的登记值。可下载材料并审批通过、退回补充材料或驳回。退回和驳回都需要填写说明。
-3. 学生在「我的申请」刷新列表，打开记录查看进度。退回后可补交材料，申请自动回到「待审批」；原材料、补交材料和审批意见会保留在办理记录里。
+1. 用 `student` 登录，进入「行政服务」。从首页点「申请成绩单」或「申请在校证明」会打开已选好类型的申请表；「办理指南」可以展开查看常见问题。姓名、学号、班级、院系和邮箱会自动带入，可按需修改或补填。首次申请可附 PDF、PNG 或 JPG；每次最多 3 份，每份最多 2 MiB。
+2. 在另一个浏览器窗口用 `admin` 登录，打开「行政服务 → 审批工作台」。首页的状态卡会跳到相应队列；也可以按编号、状态和类型查找。在详情页可核对本次填写的资料；与账号登记不同时会显示对应的登记值。可下载材料并通过、退回或驳回申请，退回和驳回需填写说明。
+3. 学生可从首页状态卡或「我的申请」打开详情，查看办理进度、复制编号或补交材料。补交后自动回到「待审批」；原材料、补交材料和审批意见都保留。详情和列表支持直接访问、刷新及浏览器返回，从详情返回列表时会保留筛选条件。
 
 两个演示账号的密码均为 `Campus2026!`。申请表的姓名和学号必填，其他三项选填。表单修改只保存到本次申请，不修改账号登记、登录邮箱或以前的申请。当前模块覆盖提交、人工审批和进度查询，审批通过代表业务状态更新；正式文件签发、智能预审和主动通知由独立模块衔接。
 
@@ -20,7 +20,9 @@
 
 模块只新增 `admin_service_applications`、`admin_service_events`、`admin_service_materials` 三张表，与报修数据分开。启动时自动创建，已有数据不需要重建。申请保存提交时的资料快照；补交和审批同其历史记录在同一事务写入，版本号防止两位管理员覆盖同一决定。申请及附件按申请人或管理员权限读取；材料仅供下载，文件校验检查类型标记和大小，材料内容仍由管理员审核。
 
-API 前缀为 `/api/admin-services`。`GET /catalog` 返回角色、选项和学生资料；`GET /applications?status=pending&page=1` 查询列表；`POST /applications` 创建；`GET /applications/{id}` 获取详情；`POST /applications/{id}/decision` 或 `POST /applications/{id}/materials` 分别审批或补交，需附当前 `version`；`GET /applications/{id}/materials/{fileId}` 下载。以上路径均相对于此前缀。
+前端使用独立的 `#admin-services` 路径空间，子页分别为 `/apply`、`/records`、`/guide`、`/detail/{id}`。主工作台仅负责导航接入和恢复链接。
+
+API 前缀为 `/api/admin-services`。`GET /catalog` 返回角色、选项和学生资料；`GET /summary` 返回当前角色有权访问的各状态数量及最近四条记录；`GET /applications` 支持 `status`、`type`、`q`（编号）和 `page` 查询；`POST /applications` 创建；`GET /applications/{id}` 获取详情；`POST /applications/{id}/decision` 或 `POST /applications/{id}/materials` 分别审批或补交，需附当前 `version`；`GET /applications/{id}/materials/{fileId}` 下载。以上路径均相对于此前缀。
 
 ## 团队合并
 
