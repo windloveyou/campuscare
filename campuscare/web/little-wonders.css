@@ -506,8 +506,7 @@
     display: flex; align-items: center; justify-content: space-between; gap: 12px;
     position: absolute; z-index: 4; left: 50%; bottom: 58px; transform: translateX(-50%);
   }
-  .photo-credit { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; color: white; font-size: .82rem; }
-  .photo-credit a { color: white; text-decoration: underline; text-underline-offset: 3px; }
+  .photo-caption { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 12px; color: white; font-size: .82rem; }
   .photo-controls, .photo-dots { display: flex; align-items: center; gap: 7px; }
   .photo-controls > button {
     width: 38px; height: 38px; flex: 0 0 38px; border: 1px solid #ffffffa6; border-radius: 50%;
@@ -555,7 +554,6 @@
   .demo-access p { margin-top: 7px; }
   .campus-gallery-card { min-width: 0; }
   .campus-gallery-card figcaption { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 11px; font-size: .82rem; }
-  .campus-gallery-card figcaption a { text-decoration: underline; text-underline-offset: 3px; }
   @media (max-width: 992px) {
     .hero-badge { display: none; }
     .split-photo { aspect-ratio: 16 / 9; }

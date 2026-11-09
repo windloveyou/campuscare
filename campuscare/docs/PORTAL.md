@@ -1,6 +1,6 @@
 # SmartCampus 门户架构
 
-门户按团队提案提供统一入口、同一账号和差异化工作区。首页可以公开浏览服务目录与校园实景；表单、记录和办理动作在登录后开放。示例校区为虚拟 GlobalConnect University（GCU），照片不表示这是伍伦贡大学的官方服务。
+门户按团队提案提供统一入口、同一账号和差异化工作区。首页可以公开浏览服务目录与校园概念图；表单、记录和办理动作在登录后开放。项目背景是虚拟的 GlobalConnect University（GCU）。
 
 | 提案子系统 | 本分支提供 | 团队集成边界 |
 | --- | --- | --- |
@@ -22,10 +22,10 @@
 
 首页基于 [uiuxlabz 的 Little Wonders GitHub 源码](https://github.com/uiuxlabz/kids-daycare-html-template/tree/ec899dd5d60b9d4b2255e71de5156bb33254d6ee) 改造；其 README 允许个人及商业使用，署名可选。沿用原模板的顶栏、导航、轮播、快捷栏、图文分栏、卡片、表单和相册样式；替换演示内容、图片和模拟表单，接入 CampusCare 已有业务。第三方样式限定在公开首页，未引入模板原有的外链字体或外部请求。
 
-校园照片由 Wikimedia Commons 提供，按 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) 使用。下列副本转换为 WebP，前两张缩小到 1920 像素宽，轮播按屏幕比例裁切；图片副本继续使用原许可。首页轮播与相册显示来源与许可链接。
+首页校园图景为本项目生成的场景图，均以虚拟 GCU 为背景。图片转换成 WebP 本地提供；轮播和服务卡片按屏幕比例裁切。站内将这些场景标记为概念图。
 
-- `uow-mckinnon.webp`：[伍伦贡大学麦金农楼](https://commons.wikimedia.org/wiki/File:Uni_of_Wollongong_McKinnon_building.JPG)，JVPurvis。
-- `uow-science.webp`：[伍伦贡大学科学楼群](https://commons.wikimedia.org/wiki/File:Uni_of_Wollongong_Science_buildings.JPG)，JVPurvis。
-- `uow-smart.webp`：[伍伦贡大学 SMART 基础设施研究楼](https://commons.wikimedia.org/wiki/File:UOW_Smart_Infrastructure_Facility.jpg)，Nikita Sergey。
+- `gcu-quadrangle.webp`：中央庭院与教学楼。
+- `gcu-learning-commons.webp`：学生在共享学习空间合作。
+- `gcu-campus-walk.webp`：学生沿校园步道走向教学区。
 
 在项目代码目录运行 `python -B -m unittest discover` 检查接口，使用 Playwright 和本机 Chrome 运行浏览器验收脚本。测试使用临时数据库；单独执行设施浏览器流程时应把 `CAMPUSCARE_TEST_URL` 指到专用测试实例，因为该流程会创建并关闭真实的测试工单。

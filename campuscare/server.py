@@ -30,7 +30,7 @@ WEB_FILES = {
         "ui.js", "app.js", "workspace.js", "facilities.js", "auth.js", "mail.js",
         "users.js", "admin-services.js", "landing.js", "style.css", "admin-services.css", "portal.css",
         "little-wonders.css",
-        "campus-art.svg", "uow-mckinnon.webp", "uow-science.webp", "uow-smart.webp",
+        "campus-art.svg", "gcu-quadrangle.webp", "gcu-learning-commons.webp", "gcu-campus-walk.webp",
     )},
 }
 WEB_TYPES = {
