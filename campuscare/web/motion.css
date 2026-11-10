@@ -1,0 +1,178 @@
+/* Shared focus, feedback and transitions for the public portal and workspaces. */
+:root {
+    --motion-quick: 150ms;
+    --motion-standard: 230ms;
+    --motion-emphasized: cubic-bezier(.2,.75,.25,1);
+}
+
+.public-site .class-card {
+    border: 1px solid #eee2d6;
+}
+.public-site .class-img-wrap { overflow: hidden; }
+.public-site .ribbon-item:focus-visible,
+.public-site .class-card:focus-within,
+.workspace-shell :is(.workspace-metric, .operations-link, .as-row):focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 3px;
+}
+.workspace-shell :is(input,select,textarea):focus-visible,
+.public-site :is(input,select,textarea):focus-visible {
+    border-color: #38867c;
+    box-shadow: 0 0 0 4px #338d7a25;
+}
+.workspace-shell .topbar { box-shadow: 0 6px 22px #2d3a4508; }
+.workspace-shell .workspace-search { border-color: #e3d7ca; }
+.workspace-shell .as-metric { border-radius: 15px; }
+.workspace-shell .workspace-metric { box-shadow: 0 3px 12px #2d3a4508; }
+.workspace-shell .operations-hero {
+    background:
+        radial-gradient(ellipse at 82% -35%, #60998680, transparent 58%),
+        linear-gradient(115deg,#1f2a33,#294a45);
+}
+.service-command { border-radius: 24px; }
+
+.public-site .campus-viewer {
+    width: min(960px, calc(100% - 30px));
+    max-height: calc(100dvh - 30px);
+    margin: auto;
+    padding: 0;
+    overflow: auto;
+    border: 1px solid #f0e3d737;
+    border-radius: 23px;
+    background: #202b33;
+    color: #fff;
+    box-shadow: 0 24px 70px #121d29a1;
+}
+.public-site .campus-viewer::backdrop { background: #18242bc9; }
+.public-site .viewer-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px clamp(14px, 3vw, 24px);
+}
+.public-site .viewer-kicker { color: #efb99e; font-size: 12px; }
+.public-site .viewer-bar h2 { color: #fff; font-size: 19px; }
+.public-site .viewer-stage {
+    display: grid;
+    place-items: center;
+    min-height: min(42dvh, 320px);
+    background: #111a21;
+    overflow: hidden;
+}
+.public-site .viewer-stage img {
+    width: 100%;
+    height: min(65dvh, 620px);
+    object-fit: contain;
+}
+.public-site .viewer-count { color: #ede8de; font-variant-numeric: tabular-nums; }
+.public-site .viewer-actions { display: flex; gap: 9px; }
+.public-site .viewer-icon {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border: 1px solid #f6e8d94d;
+    border-radius: 50%;
+    background: #ffffff0f;
+    color: #fff;
+    font-size: 25px;
+    line-height: 1;
+}
+.public-site .viewer-icon:hover { background: #805043; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .public-site .hero-bg img {
+        transition: opacity 0s linear 820ms, transform 5.8s linear;
+        transform: scale(1.005);
+        translate: 0 var(--campus-shift, 0px);
+        scale: 1.13;
+    }
+    .public-site .hero-bg img.active {
+        z-index: 1;
+        transition: opacity 820ms ease, transform 5.8s linear;
+    }
+    .public-site :is(.split-photo-frame,.class-img-wrap,.gallery-item) > img {
+        translate: 0 var(--campus-shift, 0px);
+        scale: 1.12;
+    }
+    .public-site.gallery-playing .hero-bg img.active { transform: scale(1.055); }
+    .public-site .motion-revealed {
+        animation: portal-reveal 570ms var(--motion-emphasized) both;
+    }
+    .public-site .motion-revealed:nth-child(3n + 2) { animation-delay: 45ms; }
+    .public-site .motion-revealed:nth-child(3n) { animation-delay: 90ms; }
+    .public-site .split-copy.motion-revealed { animation-name: portal-copy-enter; }
+    .public-site .split-img.motion-revealed .split-photo-frame {
+        animation: portal-photo-unmask 760ms var(--motion-emphasized);
+    }
+    .public-site .class-img { transition: transform 420ms var(--motion-emphasized); }
+    .public-site .class-card:is(:hover,:focus-within) .class-img { transform: scale(1.055); }
+    .public-site .ribbon-icon { transition: transform var(--motion-standard) var(--motion-emphasized); }
+    .public-site .ribbon-item:is(:hover,:focus-visible) .ribbon-icon { transform: translateY(-4px) rotate(-6deg); }
+    .public-site :is(.directory-tabs button,.ribbon-item,.viewer-icon),
+    .workspace-shell :is(.navitem,.btn,.workspace-search,.workspace-logout,.as-nav a,.as-row,.as-metric,
+        .workspace-metric,.operations-link,.service-tile),
+    .service-command .command-option {
+        transition: background-color var(--motion-quick), color var(--motion-quick),
+            border-color var(--motion-standard), box-shadow var(--motion-standard),
+            transform var(--motion-standard) var(--motion-emphasized);
+    }
+    .workspace-shell :is(.workspace-metric,.as-metric,.service-tile):is(:hover,:focus-within) {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 26px #2d3a4512;
+    }
+    .workspace-shell :is(.btn,.workspace-metric):active,
+    .public-site :is(.btn,.ribbon-item,.viewer-icon):active {
+        transform: translateY(1px) scale(.985);
+    }
+    .workspace-shell :is(.as-row,.workspace-metric,.operations-link) > .icon:last-child,
+    .public-site :is(.class-card,.nav-cta) .icon {
+        transition: transform var(--motion-standard) var(--motion-emphasized);
+    }
+    .workspace-shell :is(.as-row,.workspace-metric,.operations-link):hover > .icon:last-child,
+    .public-site :is(.class-card button,.nav-cta):hover .icon {
+        transform: translateX(3px);
+    }
+    .motion-page { animation: portal-arrive 300ms var(--motion-emphasized) both; }
+    .drawer-backdrop, .service-command::backdrop, .public-site .campus-viewer::backdrop {
+        animation: portal-fade 200ms ease-out;
+    }
+    .drawer { animation: portal-drawer 280ms var(--motion-emphasized) both; }
+    .service-command[open], .public-site .campus-viewer[open] {
+        animation: portal-dialog 260ms var(--motion-emphasized) both;
+    }
+    .public-site .viewer-stage img { animation: portal-fade 200ms ease-out; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .public-site :is(.hero-bg img,.class-card,.gallery-item img,.btn,.nav-cta):hover,
+    .public-site .hero-bg img { transform: none; }
+    #toast { transition: none; }
+}
+
+@keyframes portal-reveal {
+    from { opacity: .55; translate: 0 18px; }
+    to { opacity: 1; translate: 0 0; }
+}
+@keyframes portal-photo-unmask {
+    from { clip-path: inset(4% 11% 4% 0 round 20px); }
+    to { clip-path: inset(0 round 20px); }
+}
+@keyframes portal-copy-enter {
+    from { opacity: .6; translate: 16px 10px; }
+    to { opacity: 1; translate: 0 0; }
+}
+@keyframes portal-arrive {
+    from { opacity: .65; translate: 0 8px; }
+    to { opacity: 1; translate: 0 0; }
+}
+@keyframes portal-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes portal-drawer {
+    from { opacity: .55; translate: 18px 0; }
+    to { opacity: 1; translate: 0 0; }
+}
+@keyframes portal-dialog {
+    from { opacity: .45; transform: translateY(9px) scale(.986); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}

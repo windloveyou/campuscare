@@ -132,7 +132,7 @@ class UserAdminTests(unittest.TestCase):
         self.assertEqual(self.edit('student',enabled='false')[0],400)
         self.assertEqual(self.edit('student',role='technician',skill='')[0],400)
         self.assertEqual(self.edit('student',role='technician',skill='电工')[0],200)
-        user=self.get('student');self.assertEqual(user['room'],'');self.assertEqual(user['identity'],'维修人员')
+        user=self.get('student');self.assertEqual(user['room'],'');self.assertEqual(user['identity'],'Technician')
         self.assertEqual(self.edit('teacher',enabled=0,note='离校办理')[0],200)
         with server.connect() as c:
             self.assertTrue(c.execute("SELECT 1 FROM tickets WHERE reporter='teacher'").fetchone())

@@ -1,6 +1,6 @@
-# CampusCare · 校园设施维护
+# SmartCampus · Campus Services Portal
 
-CSIT883 / Huang Tianze / Module 3 的本地课程项目。覆盖虚拟 GCU 校区、三类权限、设施台账、图文报修入口、维修流程、管理看板及合成数据上的故障预测实验。
+CSIT883 的本地课程项目。覆盖虚拟 GCU 校区的设施维护（模块 3）和成绩单与证明统一申请门户（模块 5），共享校园账号、权限和数据。公开首页可浏览服务并直达对应登录入口；登录后的师生、维修和管理人员分别进入自己的工作区。首页使用虚拟 GCU 校园概念图。
 
 ## 启动
 
@@ -8,24 +8,32 @@ CSIT883 / Huang Tianze / Module 3 的本地课程项目。覆盖虚拟 GCU 校�
 
 ```sh
 git clone https://github.com/windloveyou/campuscare.git
-cd campuscare
+cd campuscare/campuscare
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -B server.py
 ```
 
-打开 http://127.0.0.1:8830 。默认只监听本机。首次启动生成 `data/campuscare.sqlite3`，后续启动保留数据。退出终端后可用相同命令重新启动。
+Windows 现场演示：安装好 Python 后，双击本目录的 [start-demo.cmd](start-demo.cmd)。它会启动本机服务并打开 http://127.0.0.1:8830/；演示期间请保留启动窗口。电脑重启或窗口关闭后，双击重新启动即可。首次启动生成 `data/campuscare.sqlite3`，后续启动保留数据。只要在同一台电脑上演示，断开 Wi-Fi 也能浏览首页、登录演示账号、提交证明和审批。
+
+真实邮件验证码和已配置的外部模型需要联网；如要演示设施二维码，请提前用 `python -m pip install -r requirements.txt` 安装二维码依赖。同一台电脑也可手动运行 `python -B server.py`。
 
 演示密码统一为 `Campus2026!`。这是一套本地课程演示账号，不应原样公开部署。
 
 | 账号 | 身份 | 权限 |
 |---|---|---|
-| student | 林同学 / 学生 | 公共设施及 D1-201 宿舍、自己的工单和关注工单 |
-| teacher | 陈老师 / 教师 | 公共设施、自己的工单和关注工单 |
-| tech | 王师傅 / 电工 | 指派给自己的维修工单 |
-| plumber | 李师傅 / 水务 | 指派给自己的维修工单 |
-| it | 赵工程师 / IT | 指派给自己的维修工单 |
-| admin | 黄天泽 / 管理人员 | 全校设施、工单、派单、巡检及统计 |
+| student | 演示学生 | 公共设施及 D1-201 宿舍、自己的工单和关注工单、发起证明申请及跟踪本人申请 |
+| teacher | 演示教师 | 公共设施、自己的工单和关注工单 |
+| tech | 电工维修员 | 指派给自己的维修工单 |
+| plumber | 水务维修员 | 指派给自己的维修工单 |
+| it | IT 维修员 | 指派给自己的维修工单 |
+| admin | 校园管理员 | 全校设施、工单、派单、巡检及统计，审批证明申请 |
+
+## 行政服务
+
+学生从「行政服务」申请成绩单或在校证明，核对自动带入的资料并按需上传材料。管理员从运营工作区进入审批队列；学生可以查看办理记录、补交材料和取消未办结的申请。登录后可以点击「查找服务」或按 Ctrl+K（macOS 为 ⌘K）搜索有权使用的服务。详见[行政服务与合并说明](docs/ADMIN_SERVICES.md)。
+
+团队集成、页面边界及图片来源见[门户架构与素材说明](docs/PORTAL.md)。
 
 ## 当前完成范围
 

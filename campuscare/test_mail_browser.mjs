@@ -22,7 +22,7 @@ with patch('mailservice.smtplib.SMTP_SSL') as smtp:
     smtp.return_value.__enter__.return_value.send_message.side_effect = capture
     server.main()
 `;
-const service = spawn('.venv/bin/python', ['-B', '-c', setup], {
+const service = spawn(process.env.CAMPUSCARE_TEST_PYTHON || (process.platform === 'win32' ? 'python' : '.venv/bin/python'), ['-B', '-c', setup], {
     env: {...process.env, HOST:'127.0.0.1', PORT:'8832', CAMPUSCARE_DB:join(temp,'test.db'), CAMPUSCARE_MAIL_CONFIG:join(temp,'mail-settings.json'), CAMPUSCARE_MAIL_MODE:'demo', TEST_OUTBOX:join(temp,'outbox.json')},
     stdio:['ignore','pipe','pipe'],
 });
@@ -36,9 +36,9 @@ try {
     browser = await chromium.launch({channel:'chrome', headless:true});
     const page = await browser.newPage({viewport:{width:1440,height:1100}});
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await page.goto('http://127.0.0.1:8832');
+    await page.goto('http://127.0.0.1:8832/#login');
     await page.locator('#account').fill('admin');
-    await page.getByRole('button',{name:'进入工作台'}).click();
+    await page.getByRole('button',{name:'Sign In'}).click();
     await page.locator('#mail-settings-button').click();
     await page.locator('#mail-settings-form').waitFor();
     assert.equal(await page.locator('#mail-test').isDisabled(), true);
@@ -51,17 +51,17 @@ try {
     await page.locator('#mail-sender').fill('test-sender@qq.com');
     await page.locator('#mail-password').fill('test-only-placeholder');
     await page.locator('#mail-save').click();
-    await page.getByText('配置已保存并生效，无需重启。请发送测试邮件确认收件。',{exact:true}).waitFor();
+    await page.getByText('Settings saved. Send a test email to verify delivery.',{exact:true}).waitFor();
     assert.equal(await page.locator('#mail-password').inputValue(), '');
     const settings = await (await page.request.get('http://127.0.0.1:8832/api/mail/settings')).json();
     assert.equal(settings.has_password,true); assert.equal('password' in settings,false);
     await page.locator('#mail-recipient').fill('browser@gmail.com');
     await page.locator('#mail-test').click();
-    await page.getByText(/邮件服务器已接受测试邮件/).waitFor();
+    await page.getByText(/The server accepted the test message/).waitFor();
     assert.equal(JSON.parse(await readFile(join(temp,'outbox.json'),'utf8')).to, 'browser@gmail.com');
     await page.locator('#mail-recipient').fill('rejected@example.com');
     await page.locator('#mail-test').click();
-    await page.getByText(/收件邮箱被邮件服务拒绝/).waitFor();
+    await page.getByText(/The provider rejected the recipient address/).waitFor();
     await page.locator('#mail-sender').fill('changed@qq.com');
     assert.equal(await page.locator('#mail-test').isDisabled(),true);
     assert.equal(await page.locator('#mail-password').getAttribute('required'), '');
@@ -77,11 +77,12 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),true);
     await page.setViewportSize({width:1440,height:1100});
     await page.locator('.topbar [data-action=logout]').click();
-    await page.getByRole('button',{name:'没有账号？注册',exact:true}).click();
-    await page.getByText(/验证码通过邮件发送/).waitFor();
+    await page.getByRole('link',{name:'Campus Sign In',exact:true}).click();
+    await page.getByRole('link',{name:'Create an account',exact:true}).click();
+    await page.getByText(/Codes are sent by email/).waitFor();
     await page.locator('#auth-email').fill('browser@163.com');
     await page.locator('#send-code').click();
-    await page.getByText(/如邮箱可用于本次操作/).waitFor();
+    await page.getByText(/If this address is eligible/).waitFor();
     assert.equal(await page.locator('#demo-code').count(),0);
     const delivered = JSON.parse(await readFile(join(temp,'outbox.json'),'utf8'));
     assert.equal(delivered.to,'browser@163.com');

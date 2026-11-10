@@ -22,26 +22,26 @@ const context = await browser.newContext({
         width: 1440,
         height: 1100
     },
-    locale: 'zh-CN'
+    locale: 'en-US'
 });
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', e => errors.push(e.message));
 async function login(role, id) {
-    await page.goto(base);
+    await page.goto(base + '/#login');
     await page.getByRole('button', {
         name: role,
         exact: true
     }).click();
     await page.locator('#account').fill(id);
     await page.getByRole('button', {
-        name: '进入工作台'
+        name: 'Sign In'
     }).click();
     await page.locator('.sidebar').waitFor();
 }
 async function logout() {
     await page.locator('.topbar [data-action=logout]').click();
-    await page.locator('#login-form').waitFor();
+    await page.getByRole('link', {name: 'Campus Sign In'}).waitFor();
 }
 async function nav(name) {
     await page.locator('nav').getByRole('button', {
@@ -50,16 +50,18 @@ async function nav(name) {
     }).click();
 }
 try {
-    await login('管理人员', 'admin');
-    if (await page.locator('.map-svg [data-location=A] text').first().textContent() !== '明理楼 A') throw Error('Map SVG label regression');
+    await login('Administrators', 'admin');
+    await page.getByRole('heading', {name: 'Campus Operations Overview'}).waitFor();
     await page.screenshot({
         path: 'artifacts/dashboard-desktop.png',
         fullPage: true
     });
-    await nav('设施台账');
+    await nav('Facilities Overview');
+    if (await page.locator('.map-svg [data-location=A] text').first().textContent() !== 'Academic Building A') throw Error('Map SVG label regression');
+    await nav('Asset Register');
     await page.locator('#filter-search').fill('A-101-FAN-01');
     await page.getByRole('button', {
-        name: '查看档案'
+        name: 'View Record'
     }).click();
     await page.locator('.qr-box img').waitFor();
     await page.waitForFunction(() => {
@@ -68,146 +70,146 @@ try {
     });
     await page.keyboard.press('Escape');
     await page.getByRole('button', {
-        name: '登记新设施',
+        name: 'Register an Asset',
         exact: true
     }).click();
     await page.locator('#asset-id').waitFor();
     await page.keyboard.press('Escape');
     await page.getByRole('button', {
-        name: '查看档案'
+        name: 'View Record'
     }).click();
     await page.getByRole('button', {
-        name: '编辑设施档案',
+        name: 'Edit Asset Record',
         exact: true
     }).click();
     await page.getByRole('button', {
-        name: '保存设施档案',
+        name: 'Save Asset Record',
         exact: true
     }).click();
     await page.getByRole('button', {
-        name: '登记新设施',
+        name: 'Register an Asset',
         exact: true
     }).waitFor();
-    await nav('校园地图');
+    await nav('Campus Map');
     await page.locator('.map-locations [data-location=D1]').click();
     await page.getByRole('button', {
-        name: /公共区域/
+        name: /Public Area/
     }).click();
-    await nav('维护与预测');
+    await nav('Maintenance and Forecasting');
     await page.getByRole('button', {
-        name: '运行预测实验'
+        name: 'Run Forecasting Experiment'
     }).click();
-    await page.getByText('测试集模型 AUROC').waitFor();
+    await page.getByText('Model AUROC on Test Set').waitFor();
     await page.screenshot({
         path: 'artifacts/maintenance.png',
         fullPage: true
     });
-    await nav('管理助手');
+    await nav('Operations Assistant');
     await page.getByRole('button', {
-        name: '哪些设施反复报修？',
+        name: 'Which assets have repeated reports?',
         exact: true
     }).click();
     await page.locator('.chat-answer').waitFor();
     await logout();
-    await login('学生 / 老师', 'student');
-    await nav('智能报修');
+    await login('Students and Faculty', 'student');
+    await nav('Report a Facility Issue');
     await page.locator('#report-location').selectOption('A');
     await page.locator('#report-asset').selectOption('A-101-FAN-01');
-    await page.locator('#report-description').fill('浏览器验收测试：教室吊扇运行时发出异响，位置已确认。');
+    await page.locator('#report-description').fill('The classroom ceiling fan makes a loud noise during operation.');
     await page.locator('#report-photos').setInputFiles('artifacts/dashboard-desktop.png');
     await page.locator('#previews img').waitFor();
     await page.locator('#analyze-btn').click();
-    await page.getByText('证据与判断边界').waitFor();
-    await page.locator('#report-title').fill('浏览器验收：吊扇异响');
+    await page.getByText('Evidence and Limitations').waitFor();
+    await page.locator('#report-title').fill('Ceiling fan making an unusual noise');
     await page.screenshot({
         path: 'artifacts/report-desktop.png',
         fullPage: true
     });
     await page.locator('#report-confirm').check();
     await page.getByRole('button', {
-        name: '提交报修',
+        name: 'Submit Report',
         exact: true
     }).click();
     await page.locator('.drawer .mono').waitFor();
     const tid = await page.locator('.drawer-head .mono').textContent();
     await page.keyboard.press('Escape');
     await logout();
-    await login('管理人员', 'admin');
-    await nav('工单中心');
+    await login('Administrators', 'admin');
+    await nav('Work Orders');
     await page.locator('#filter-search').fill(tid);
     await page.getByRole('button', {
-        name: '浏览器验收：吊扇异响',
+        name: 'Ceiling fan making an unusual noise',
         exact: true
     }).click();
     await page.locator('#assign-person').selectOption('tech');
     await page.getByRole('button', {
-        name: '确认派单',
+        name: 'Confirm Assignment',
         exact: true
     }).click();
     await page.locator('.drawer .badge.blue').filter({
-        hasText: '已派单'
+        hasText: 'Assigned'
     }).waitFor();
     await page.keyboard.press('Escape');
     await logout();
-    await login('维修人员', 'tech');
-    await nav('我的维修任务');
+    await login('Technicians', 'tech');
+    await nav('My Maintenance Tasks');
     await page.locator('#filter-search').fill(tid);
     await page.getByRole('button', {
-        name: '浏览器验收：吊扇异响',
+        name: 'Ceiling fan making an unusual noise',
         exact: true
     }).click();
-    await page.locator('#action-note').fill('浏览器验收模拟：到场检查。');
+    await page.locator('#action-note').fill('Inspected the fan on site.');
     await page.getByRole('button', {
-        name: '开始检查维修',
+        name: 'Start Repair',
         exact: true
     }).click();
     await page.getByRole('button', {
-        name: '提交验收',
+        name: 'Submit for Verification',
         exact: true
     }).waitFor();
-    await page.locator('#action-note').fill('浏览器验收模拟：处理结束，等待确认。');
+    await page.locator('#action-note').fill('Repair complete; awaiting verification.');
     await page.getByRole('button', {
-        name: '提交验收',
+        name: 'Submit for Verification',
         exact: true
     }).click();
     await page.locator('.drawer .badge.blue').filter({
-        hasText: '待验收'
+        hasText: 'Awaiting Verification'
     }).waitFor();
     await page.keyboard.press('Escape');
     await logout();
-    await login('学生 / 老师', 'student');
-    await nav('工单中心');
+    await login('Students and Faculty', 'student');
+    await nav('Work Orders');
     await page.locator('#filter-search').fill(tid);
     await page.getByRole('button', {
-        name: '浏览器验收：吊扇异响',
+        name: 'Ceiling fan making an unusual noise',
         exact: true
     }).click();
     await page.getByRole('button', {
-        name: '确认验收通过',
+        name: 'Confirm Completion',
         exact: true
     }).click();
     await page.locator('.drawer .badge.green').filter({
-        hasText: '已完成'
+        hasText: 'Completed'
     }).waitFor();
     await page.screenshot({
         path: 'artifacts/workflow-completed.png',
         fullPage: true
     });
     await page.keyboard.press('Escape');
-    await nav('工作台');
+    await nav('Dashboard');
     await page.setViewportSize({
         width: 390,
         height: 844
     });
     await page.reload();
-    await page.locator('.stats').waitFor();
+    await page.getByRole('heading', {name: 'Student Services'}).waitFor();
     await page.screenshot({
         path: 'artifacts/dashboard-mobile.png',
         fullPage: false
     });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth);
     if (overflow) throw Error('Mobile horizontal overflow');
-    await nav('校园地图');
+    await nav('Campus Map');
     await page.screenshot({
         path: 'artifacts/map-mobile.png',
         fullPage: false

@@ -1,10 +1,10 @@
 # 开通真实邮件验证码
 
-用户填写注册邮箱，点击“获取验证码”，然后去该邮箱的收件箱查看 CampusCare 邮件，将其中6位验证码填回页面。找回密码必须使用已经验证的注册邮箱。验证码10分钟有效、仅能用一次，重发间隔60秒。
+用户填写注册邮箱，点击“获取验证码”，然后去该邮箱的收件箱查看 SmartCampus 邮件，将其中6位验证码填回页面。找回密码必须使用已经验证的注册邮箱。验证码10分钟有效、仅能用一次，重发间隔60秒。
 
 ## 管理员只需配置一个发件邮箱
 
-1. 在运行 CampusCare 的电脑上打开 http://127.0.0.1:8830，以管理员登录（本地演示账号 `admin`，密码 `Campus2026!`）。
+1. 在运行 SmartCampus 的电脑上打开 http://127.0.0.1:8830，以管理员登录（本地演示账号 `admin`，密码 `Campus2026!`）。
 2. 点击顶部“邮件服务”，选择 QQ、163 或 Gmail，填写发件邮箱。
 3. 在邮箱服务商网站生成授权码/应用专用密码，将其填入本机页面。不要使用普通登录密码，也不要将授权码发到聊天、截图或提交源码。
 4. 点击“保存并启用邮件发送”。配置立即生效，无需重启。
@@ -23,7 +23,7 @@
 
 - **QQ：** 登录 [QQ 邮箱](https://mail.qq.com)，在设置中找到 POP3/IMAP/SMTP 服务，开启 SMTP 并按提示完成身份验证、生成授权码。页面名称可能随邮箱版本变化。
 - **163：** 登录 [163 邮箱](https://mail.163.com)，设置 → POP3/SMTP/IMAP，开启 IMAP/SMTP 或 POP3/SMTP 服务，按提示获取客户端授权码。可参考 [华为官方客户端配置说明](https://consumer.huawei.com/cn/support/content/zh-cn15872099/)。
-- **Gmail：** 开启两步验证，再进入 [Google 应用密码](https://myaccount.google.com/apppasswords) 为 CampusCare 创建密码。输入带空格的应用密码时系统会去除分组空格。部分学校/企业或高级保护账号不提供此功能，可改用 QQ/163 发件；这不影响 Gmail 用户收件。见 [Google 官方说明](https://support.google.com/accounts/answer/185833?hl=en)。
+- **Gmail：** 开启两步验证，再进入 [Google 应用密码](https://myaccount.google.com/apppasswords) 为 SmartCampus 创建密码。输入带空格的应用密码时系统会去除分组空格。部分学校/企业或高级保护账号不提供此功能，可改用 QQ/163 发件；这不影响 Gmail 用户收件。见 [Google 官方说明](https://support.google.com/accounts/answer/185833?hl=en)。
 
 运行服务的电脑必须能够连接所选邮箱的 SMTP 服务器；选 Gmail 发件时尤其要确认当前网络可连接 Google。服务运行在本机，因此关闭服务后就不能发验证码。
 

@@ -95,7 +95,7 @@ def train():
             "days_since_last_div30",
             "recurrences_14d",
         ],
-        "disclaimer": "合成设备事件实验：不同设备划分训练/测试，观察截止日后14天仅用于标签；指标不代表真实校园性能。",
+        "disclaimer": "Synthetic asset experiment: training and test sets use separate assets. The 14-day window after the observation cutoff is used only for labels. Results do not measure real campus performance.",
     }
     return w, mean, scale, metrics
 
@@ -132,14 +132,14 @@ def rank_assets(c):
                 "name": a["name"],
                 "score": score,
                 "level": (
-                    "暂无法评估"
+                    "Insufficient records"
                     if score is None
-                    else "较高" if score >= 0.5 else "一般"
+                    else "Elevated" if score >= 0.5 else "Moderate"
                 ),
                 "reason": (
-                    f"近30天 {x[1]} 次报修，近90天 {x[2]} 次；记录可能含未确认故障及模拟种子数据。"
+                    f"{x[1]} reports in the past 30 days and {x[2]} in the past 90 days. Counts may include unverified reports and demo records."
                     if score is not None
-                    else "少于3条历史报修；不输出风险分数。"
+                    else "Fewer than three historical reports. No risk score is available."
                 ),
             }
         )

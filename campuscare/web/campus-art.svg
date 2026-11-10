@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="640" viewBox="0 0 920 640" fill="none">
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0v32" stroke="#a4bba1" stroke-opacity=".12"/></pattern>
+    <linearGradient id="ground" x1="200" y1="160" x2="690" y2="590" gradientUnits="userSpaceOnUse"><stop stop-color="#42634f"/><stop offset="1" stop-color="#294738"/></linearGradient>
+    <linearGradient id="stone" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#faf2d8"/><stop offset="1" stop-color="#bcbf9e"/></linearGradient>
+    <g id="tree"><path d="M0 2v18" stroke="#b0a27e" stroke-width="2"/><path d="M0-20 12-2 5 7H-5L-12-2Z" fill="#9baa70"/><path d="M0-20v27l-5 0-7-9Z" fill="#6e8b60"/></g>
+    <g id="lamp"><path d="M0 0v14M-4 0h8" stroke="#d4d9ae" stroke-width="1.5"/><circle r="2.2" fill="#e3ecb5"/></g>
+  </defs>
+  <path fill="url(#grid)" d="M0 0h920v640H0z"/>
+  <g stroke="#afc39f" stroke-opacity=".22"><circle cx="483" cy="306" r="293"/><circle cx="483" cy="306" r="256" stroke-dasharray="3 7"/><path d="M20 305h870M483 17v573M91 120h65m-33-32v64M778 492h65m-33-32v64"/></g>
+  <path d="m78 326 395-197 389 193-395 211Z" fill="#0a231c" opacity=".65" transform="translate(0 22)"/>
+  <path d="m78 326 389 207 395-211v21L467 554 78 346Z" fill="#20382e" stroke="#68816a"/>
+  <path d="m78 326 395-197 389 193-395 211Z" fill="url(#ground)" stroke="#8ba484"/>
+  <path d="m143 343 389-197m-71 383 389-208M203 264l397 201m-218-296 398 200M294 218l389 198" stroke="#8ea17d" stroke-opacity=".33" stroke-width="2"/>
+  <path d="m118 335 398-198 23 12-397 198zm180-120 398 202-22 12-397-201zm-89 110 306 163-24 12-306-164z" fill="#c0c5a1" opacity=".72"/>
+  <path d="m155 335 343-171m-199 60 385 195" stroke="#e5e0bc" stroke-width="1.5" stroke-dasharray="7 8"/>
+  <path d="m521 354 95-48 92 46-95 51z" fill="#92a578" stroke="#b4c29b"/>
+  <path d="m541 353 76-38 73 37-77 41z" fill="#416e62" stroke="#d0d2a5" stroke-width="2"/>
+  <ellipse cx="616" cy="354" rx="38" ry="17" stroke="#a7c4a6" stroke-dasharray="4 5"/>
+  <path d="m578 354 38-19 38 19-38 20z" fill="#6f9990" stroke="#bfd3b6"/>
+  <path d="M616 348v-18m-13 21 13-21 13 21" stroke="#d4ddc6" stroke-width="1.5"/>
+  <!-- Library: the large stone pavilion -->
+  <path d="m276 308 150-76 137 68-149 82z" fill="#18392e" opacity=".7"/>
+  <path d="m278 226 141 71v76l-141-70z" fill="#d5d1ad" stroke="#2c4b3b"/>
+  <path d="m419 297 134-69v74l-134 71z" fill="#94a389" stroke="#2c4b3b"/>
+  <path d="m278 226 133-69 142 71-134 69z" fill="url(#stone)" stroke="#203f31" stroke-width="2"/>
+  <path d="m296 226 115-58 123 60-115 58z" fill="#e9dfb9" stroke="#a8ae8d"/>
+  <path d="m328 224 83-42 85 41-82 44z" fill="#a7b38d" stroke="#7c9178"/>
+  <path d="m353 226 58-30 58 28-56 29z" fill="#587b68"/>
+  <path d="m296 247 107 54v46l-107-54z" fill="#516e5a"/>
+  <path d="m298 253 104 52m-104-40 104 52m-104-40 104 52m-88-71v39m19-30v39m19-30v39m19-30v39m19-30v39" stroke="#b3bc98" stroke-width="2"/>
+  <path d="m435 302 105-56v42l-105 56z" fill="#4a6a58"/>
+  <path d="m437 306 101-55m-101 66 101-55m-101 66 101-55m-82 10v36m20-46v36m20-46v36m20-46v36" stroke="#95a98e" stroke-width="1.6"/>
+  <path d="m356 344 57 29-35 17-57-29z" fill="#e2d9b3" stroke="#8a9b7a"/>
+  <path d="m332 356 56 29m-44-34 56 28" stroke="#a5a989"/>
+  <!-- Two smaller classroom buildings -->
+  <path d="m562 228 83-42 78 38-84 44z" fill="#e0d7a9" stroke="#2b4737"/>
+  <path d="m562 228 77 40v45l-77-40z" fill="#aaa885"/>
+  <path d="m639 268 84-44v45l-84 44z" fill="#718d73"/>
+  <path d="m574 247 54 28v20l-54-28zm76 29 62-32v20l-62 32z" fill="#3d6252"/>
+  <path d="m583 252v20m13-13v20m13-13v20m13-13v20m42-21v19m15-27v20m15-28v20m15-27v20" stroke="#a9b597"/>
+  <path d="m582 226 63-31 59 29-64 33z" fill="#c2c397" stroke="#8d9e7e"/>
+  <path d="m193 367 66-35 59 30-66 35z" fill="#d8cba1" stroke="#324b3a"/>
+  <path d="m193 367 59 30v36l-59-29z" fill="#aea588"/>
+  <path d="m252 397 66-35v37l-66 34z" fill="#819076"/>
+  <path d="m204 385 38 20v14l-38-20zm59 20 44-23v15l-44 23z" fill="#365c4d"/>
+  <path d="m212 390v14m10-9v14m10-9v14m42-15v14m11-20v15m11-21v15" stroke="#b4ba95"/>
+  <path d="m359 434 87-45 100 50-87 46z" fill="#678263" stroke="#9daf87"/>
+  <path d="m374 434 73-36 84 41-72 37z" fill="#49715e" stroke="#bdc2a1"/>
+  <path d="m395 436 53-28 60 30-53 29z" stroke="#aabd9d" stroke-width="1.5"/>
+  <path d="m422 422 60 30" stroke="#aabd9d" stroke-width="1.5"/>
+  <g>
+    <use href="#tree" x="156" y="311"/><use href="#tree" x="177" y="302"/><use href="#tree" x="199" y="290"/>
+    <use href="#tree" x="216" y="276"/><use href="#tree" x="241" y="264"/><use href="#tree" x="268" y="251"/>
+    <use href="#tree" x="475" y="153"/><use href="#tree" x="500" y="161"/><use href="#tree" x="527" y="175"/>
+    <use href="#tree" x="720" y="292"/><use href="#tree" x="744" y="304"/><use href="#tree" x="765" y="318"/>
+    <use href="#tree" x="728" y="382"/><use href="#tree" x="706" y="396"/><use href="#tree" x="681" y="407"/>
+    <use href="#tree" x="643" y="434"/><use href="#tree" x="616" y="449"/><use href="#tree" x="585" y="465"/>
+    <use href="#tree" x="358" y="471"/><use href="#tree" x="383" y="484"/><use href="#tree" x="412" y="497"/>
+    <use href="#tree" x="514" y="393"/><use href="#tree" x="540" y="408"/><use href="#tree" x="564" y="419"/>
+    <use href="#lamp" x="238" y="345"/><use href="#lamp" x="300" y="372"/><use href="#lamp" x="407" y="401"/><use href="#lamp" x="503" y="473"/><use href="#lamp" x="755" y="339"/>
+  </g>
+  <g fill="#d7e1bd" font-family="ui-monospace,monospace" font-size="11" letter-spacing="3">
+    <text x="621" y="114">CAMPUS PLAN</text><text x="120" y="514">GCU / 01</text>
+  </g>
+  <g stroke="#d7e1bd" stroke-opacity=".75"><path d="M621 124h123M120 522h105"/><circle cx="803" cy="162" r="20"/><path d="m803 147-6 19 6-4 6 4z" fill="#d7e1bd"/></g>
+</svg>
