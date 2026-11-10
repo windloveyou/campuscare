@@ -4,6 +4,7 @@ const workspace = (function () {
         overview: ['grid', 'Dashboard'],
         'admin-services': ['ticket', 'Administrative Services'],
         report: ['plus', 'Report a Facility Issue'],
+        bookings: ['calendar', 'Venue Booking'],
         tickets: ['tool', 'Work Orders'],
         map: ['map', 'Campus Map'],
         assets: ['box', 'Asset Register'],
@@ -26,6 +27,7 @@ const workspace = (function () {
         {key: 'transcript', group: 'documents', icon: 'ticket', tag: 'Administrative Services', title: 'Transcript Request', desc: 'Request a transcript for further study, an internship, or an exchange program.', target: paths.transcript, role: 'user'},
         {key: 'enrollment', group: 'documents', icon: 'check', tag: 'Administrative Services', title: 'Proof of Enrollment', desc: 'Request a letter confirming your current enrollment.', target: paths.enrollment, role: 'user'},
         {key: 'report', group: 'campus', icon: 'tool', tag: 'Campus Facilities', title: 'Report an Issue', desc: 'Report a facility issue, attach photos, and track the repair.', target: '#campus/report', role: 'user'},
+        {key: 'bookings', group: 'campus', icon: 'calendar', tag: 'Campus Services', title: 'Venue Booking', desc: 'Check venue availability and submit a booking request.', target: '#campus/bookings', role: 'user'},
         {key: 'map', group: 'campus', icon: 'map', tag: 'Campus Facilities', title: 'Campus Guide', desc: 'Explore campus buildings, residences, and facilities.', target: '#campus/map', role: 'user'},
         {key: 'review', group: 'staff', icon: 'grid', tag: 'Administrators', title: 'Application Review', desc: 'Assign, review, and process student applications.', target: paths.review, role: 'admin'},
         {key: 'maintenance', group: 'staff', icon: 'tool', tag: 'Technicians', title: 'Maintenance Workspace', desc: 'View assigned work orders and submit completed repairs for verification.', target: '#campus/tickets', role: 'technician'},
@@ -38,11 +40,11 @@ const workspace = (function () {
         if (user.role === 'admin') return [
             ['Overview', ['overview']],
             ['Administrative Services', ['admin-services']],
-            ['Campus Facilities', ['tickets', 'report', 'map', 'assets', 'facility-overview', 'maintenance']],
+            ['Campus Facilities', ['tickets', 'report', 'bookings', 'map', 'assets', 'facility-overview', 'maintenance']],
             ['System Settings', ['users', 'assistant']],
         ];
         if (user.role === 'technician') return [['Service navigation', ['overview', 'tickets', 'map', 'assets']]];
-        return [['Service navigation', ['overview', ...(supports(user) ? ['admin-services'] : []), 'report', 'tickets', 'map', 'assets']]];
+        return [['Service navigation', ['overview', ...(supports(user) ? ['admin-services'] : []), 'report', 'bookings', 'tickets', 'map', 'assets']]];
     }
     const allowed = (user, id) => nav(user).some(([, ids]) => ids.includes(id));
 

@@ -13,6 +13,7 @@ import urllib.request
 import urllib.error
 import accounts
 import admin_services
+import bookings
 import demo_accounts
 import english_data
 import mailservice
@@ -28,7 +29,7 @@ ROOT = Path(__file__).resolve().parent
 WEB_FILES = {
     "/": "index.html",
     **{"/" + name: name for name in (
-        "ui.js", "app.js", "workspace.js", "facilities.js", "auth.js", "mail.js",
+        "ui.js", "app.js", "workspace.js", "facilities.js", "bookings.js", "auth.js", "mail.js",
         "users.js", "admin-services.js", "landing.js", "motion.js", "style.css", "admin-services.css", "portal.css",
         "little-wonders.css", "motion.css",
         "campus-art.svg", "gcu-quadrangle.webp", "gcu-learning-commons.webp", "gcu-campus-walk.webp",
@@ -96,6 +97,7 @@ def seed():
         )
         accounts.migrate(c)
         admin_services.migrate(c)
+        bookings.migrate(c)
         english_data.migrate(c)
         demo_accounts.migrate(c)
         if c.execute("SELECT count(*) FROM users").fetchone()[0]:
@@ -649,6 +651,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(result)
             return
         with connect() as c:
+            if path == "/api/bookings":
+                u = self.auth(c)
+                self.respond(bookings.listing(c, u, parse_qs(parsed.query, keep_blank_values=True), APIError))
+                return
             u = self.auth(c)
             if path == '/api/users':
                 self.respond(user_admin.listing(c,u,parse_qs(parsed.query),APIError))
@@ -835,6 +841,15 @@ class Handler(BaseHTTPRequestHandler):
                 result, status = admin_services.write(c, u, path, body, APIError)
                 c.commit()
                 self.respond(result, status)
+                return
+            if path in bookings.ACTIONS:
+                # Serialize the availability check and state change across SQLite writers.
+                c.execute("BEGIN IMMEDIATE")
+                u = self.auth(c, True)
+                action = bookings.ACTIONS[path]
+                result = bookings.change(c, u, action, body, APIError)
+                c.commit()
+                self.respond(result, 201 if action == "create" else 200)
                 return
             u = self.auth(c, True)
             if path == '/api/users' or path.startswith('/api/users/'):

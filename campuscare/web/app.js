@@ -194,6 +194,9 @@ function render() {
     } else if (page === 'users') {
         content.innerHTML = usersPage();
         bindUsersPage();
+    } else if (page === 'bookings') {
+        content.innerHTML = bookings.view();
+        bookings.bind();
     } else {
         content.innerHTML = facilities.views[page]();
         facilities.bind();
