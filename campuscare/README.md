@@ -14,7 +14,9 @@ python3 -m venv .venv
 .venv/bin/python -B server.py
 ```
 
-Windows 可用 `python -m pip install -r requirements.txt` 和 `python -B server.py` 在项目代码目录启动。打开 http://127.0.0.1:8830 。默认只监听本机。首次启动生成 `data/campuscare.sqlite3`，后续启动保留数据。退出终端后可用相同命令重新启动。
+Windows 现场演示：安装好 Python 后，双击本目录的 [start-demo.cmd](start-demo.cmd)。它会启动本机服务并打开 http://127.0.0.1:8830/；演示期间请保留启动窗口。电脑重启或窗口关闭后，双击重新启动即可。首次启动生成 `data/campuscare.sqlite3`，后续启动保留数据。只要在同一台电脑上演示，断开 Wi-Fi 也能浏览首页、登录演示账号、提交证明和审批。
+
+真实邮件验证码和已配置的外部模型需要联网；如要演示设施二维码，请提前用 `python -m pip install -r requirements.txt` 安装二维码依赖。同一台电脑也可手动运行 `python -B server.py`。
 
 演示密码统一为 `Campus2026!`。这是一套本地课程演示账号，不应原样公开部署。
 
