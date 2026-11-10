@@ -1,6 +1,6 @@
 # SmartCampus 门户架构
 
-门户按团队提案提供统一入口、同一账号和差异化工作区。首页可以公开浏览服务目录与校园概念图；表单、记录和办理动作在登录后开放。项目背景是虚拟的 GlobalConnect University（GCU）。
+SmartCampus 按团队提案提供统一入口、同一账号和差异化工作区。首页可以公开浏览服务目录与校园概念图；表单、记录和办理动作在登录后开放。项目背景是虚拟的 GlobalConnect University（GCU）。网页、内置演示资料和系统提示统一使用英文；已有的用户输入内容会原样保留。
 
 | 提案子系统 | 本分支提供 | 团队集成边界 |
 | --- | --- | --- |
@@ -22,7 +22,7 @@
 | `web/admin-services.js` | 行政业务页面，保留 `#admin-services` 路径和原接口 |
 | `server.py` | 提供本地页面资源，继续校验各业务接口的权限 |
 
-首页基于 [uiuxlabz 的 Little Wonders GitHub 源码](https://github.com/uiuxlabz/kids-daycare-html-template/tree/ec899dd5d60b9d4b2255e71de5156bb33254d6ee) 改造；其 README 允许个人及商业使用，署名可选。沿用原模板的顶栏、导航、轮播、快捷栏、图文分栏、卡片、表单和相册样式；替换演示内容、图片和模拟表单，接入 CampusCare 已有业务。第三方样式限定在公开首页，未引入模板原有的外链字体或外部请求。
+首页基于 [uiuxlabz 的 Little Wonders GitHub 源码](https://github.com/uiuxlabz/kids-daycare-html-template/tree/ec899dd5d60b9d4b2255e71de5156bb33254d6ee) 改造；其 README 允许个人及商业使用，署名可选。沿用原模板的顶栏、导航、轮播、快捷栏、图文分栏、卡片和相册样式；替换演示内容与图片，接入 SmartCampus 的现有业务。第三方样式限定在公开首页，未引入模板原有的外链字体或外部请求。
 
 首页校园图景为本项目生成的场景图，均以虚拟 GCU 为背景。轮播、概览、六张服务卡片及相册分别使用独立的 WebP 图片；轮播和服务卡片按屏幕比例裁切。站内将这些场景标记为概念图。
 

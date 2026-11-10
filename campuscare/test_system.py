@@ -215,7 +215,7 @@ class SystemTests(unittest.TestCase):
             200,
         )
         self.assertIn(
-            "数据库", c.call("/ask", {"question": "哪些工单待分配"})[1]["mode"]
+            "stored work orders", c.call("/ask", {"question": "Which work orders are unassigned?"})[1]["mode"]
         )
 
     def test_06_qr(self):
@@ -296,15 +296,16 @@ class ModelAdapterTests(unittest.TestCase):
                 with patch('urllib.request.urlopen', return_value=self.response(bad)):
                     r=server.model_analysis({'id':'A-101-FAN-01','name':'风扇','category':'风扇'},'风扇异响',[])
                     self.assertEqual(r['mode'],'rules')
-                    self.assertIn('降级',r['provider_note'])
+                    self.assertIn('Text-based assistance was used instead',r['provider_note'])
 
     def test_no_image_cannot_become_image_evidence(self):
         with patch.dict(os.environ, {'CAMPUSCARE_OLLAMA_URL': 'http://localhost:11434'}):
-            payload={'summary':'用户报告风扇异响','observations':[{'source':'图片','text':'杜撰视觉证据'},{'source':'用户描述','text':'异响'}]}
+            payload={'summary':'The fan is noisy','observations':[{'source':'Photo','text':'Unsupported visual claim'},{'source':'User description','text':'Unusual noise'}]}
             with patch('urllib.request.urlopen', return_value=self.response(payload)):
                 r=server.model_analysis({'id':'A-101-FAN-01','name':'风扇','category':'风扇'},'风扇异响',[])
                 self.assertEqual(r['mode'],'model')
-                self.assertFalse(any(x['source']=='图片' for x in r['observations']))
+                self.assertFalse(any(x['source']=='Photo' for x in r['observations']))
+                self.assertTrue(any(x['source']=='User description' for x in r['observations']))
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

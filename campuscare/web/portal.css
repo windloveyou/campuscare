@@ -94,6 +94,10 @@
 .account-back:hover, .account-card .sign-in-links a:hover { text-decoration: underline; text-underline-offset: 4px; }
 .account-card .login-foot { color: #53665d; font-size: 12px; }
 @media (max-width: 680px) {
+    .account-header { padding-inline: 16px; }
+    .account-header .site-brand { gap: 8px; }
+    .account-header .site-brand strong { font-size: 19px; }
+    .account-back { white-space: normal; text-align: right; font-size: 13px; }
     .account-layout { grid-template-columns: minmax(0,1fr); border-radius: 20px; }
     .account-panel { padding: 20px 24px; }
     .account-panel .account-emblem { display: none; }

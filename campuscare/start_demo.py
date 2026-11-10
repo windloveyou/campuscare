@@ -23,7 +23,7 @@ def campuscare_is_running(port):
         connection.request("GET", "/")
         response = connection.getresponse()
         page = response.read(16384)
-        return response.status == 200 and b"<title>CampusCare" in page and b'"/landing.js"' in page
+        return response.status == 200 and b"<title>SmartCampus" in page and b'"/landing.js"' in page
     except (OSError, HTTPException):
         return False
     finally:
@@ -42,7 +42,7 @@ def show_homepage(url):
 def run_demo(port=PORT):
     url = f"http://{HOST}:{port}/"
     if port and campuscare_is_running(port):
-        print(f"CampusCare is already running at {url}", flush=True)
+        print(f"SmartCampus is already running at {url}", flush=True)
         show_homepage(url)
         return 0
 
@@ -50,7 +50,7 @@ def run_demo(port=PORT):
         http = DemoServer((HOST, port), server.Handler)
     except OSError:
         if campuscare_is_running(port):
-            print(f"CampusCare is already running at {url}", flush=True)
+            print(f"SmartCampus is already running at {url}", flush=True)
             show_homepage(url)
             return 0
         print(f"Cannot listen on {HOST}:{port}. Check whether another app is using this port.", flush=True)
@@ -59,7 +59,7 @@ def run_demo(port=PORT):
     with http:
         server.seed()
         url = f"http://{HOST}:{http.server_port}/"
-        print(f"CampusCare is running at {url}", flush=True)
+        print(f"SmartCampus is running at {url}", flush=True)
         print("Keep this window open during the demo. Press Ctrl+C to stop.", flush=True)
         Thread(target=show_homepage, args=(url,), daemon=True).start()
         try:

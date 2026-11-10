@@ -368,8 +368,31 @@ class AdminServicesTests(unittest.TestCase):
             server.seed()
             server.seed()
         self.assertEqual(self.student.call(ROOT + "/catalog")[1]["profile"]["student_no"], "DEMO-STUDENT-01")
-        self.assertEqual(self.student.call("/bootstrap")[1]["user"]["name"], "演示学生")
+        self.assertEqual(self.student.call("/bootstrap")[1]["user"]["name"], "Demo Student")
         self.assertEqual(self.login("teacher").call("/bootstrap")[1]["user"]["name"], "自定义显示名")
+
+    def test_english_upgrade_preserves_existing_requests(self):
+        purpose = "用户填写的用途"
+        application = self.submit(purpose=purpose)
+        application_id = application.rsplit("/", 1)[-1]
+        with server.connect() as c:
+            c.execute("UPDATE users SET identity='学生',name='演示学生' WHERE id='student'")
+            c.execute("UPDATE assets SET name='空调',category='空调',position='教室内' WHERE id='A-201-AC-01'")
+            c.execute("UPDATE admin_service_applications SET profile=replace(profile,'Demo Student','演示学生') WHERE id=?", (application_id,))
+            c.execute(
+                "INSERT INTO admin_service_events(application_id,actor_id,action,note,created) VALUES (?,?,?,?,?)",
+                (application_id, "admin", "claimed", "已领取申请。\n内部说明", server.NOW()),
+            )
+        server.seed()
+        server.seed()
+        self.assertEqual(self.student.call("/bootstrap")[1]["user"]["identity"], "Student")
+        self.assertEqual(self.student.call(application)[1]["application"]["purpose"], purpose)
+        detail = self.admin.call(application)[1]
+        self.assertEqual(detail["application"]["profile"]["name"], "Demo Student")
+        self.assertEqual(detail["events"][-1]["note"], "Application claimed.\n内部说明")
+        with server.connect() as c:
+            asset = c.execute("SELECT name,category,position FROM assets WHERE id='A-201-AC-01'").fetchone()
+            self.assertEqual(tuple(asset), ("Air Conditioner", "Air Conditioner", "Inside the classroom"))
 
 
 if __name__ == "__main__":

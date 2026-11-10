@@ -3,22 +3,24 @@ const adminServices = (function () {
     'use strict';
     const root = '/admin-services';
     const applications = root + '/applications';
-    const fields = {name: '姓名', student_no: '学号', class_name: '班级', department: '学院 / 院系', email: '邮箱'};
+    const fields = {name: 'Full Name', student_no: 'Student ID', class_name: 'Class', department: 'School or Department', email: 'Email'};
     const profileInputAttributes = {
         name: 'required minlength="2" maxlength="50"',
-        student_no: 'required minlength="3" maxlength="30" title="3–30 位字母、数字或连字符"',
+        student_no: 'required minlength="3" maxlength="30" title="3–30 letters, numbers, or hyphens"',
         class_name: 'maxlength="80"',
         department: 'maxlength="80"',
         email: 'type="email" maxlength="254"',
     };
     const colors = {pending: 'blue', needs_materials: 'orange', approved: 'green', rejected: 'red', cancelled: ''};
-    const eventLabels = {submitted: '提交申请', supplemented: '补交材料', needs_materials: '退回补充材料', approved: '审批通过', rejected: '审批未通过', cancelled: '学生取消申请'};
-    const assignmentLabels = {claimed: '领取申请', released: '交回队列', transferred: '转交同事'};
+    const eventLabels = {submitted: 'Application Submitted', supplemented: 'Documents Submitted', needs_materials: 'Additional Documents Requested', approved: 'Application Approved', rejected: 'Application Rejected', cancelled: 'Canceled by Student'};
+    const assignmentLabels = {claimed: 'Application Claimed', released: 'Returned to Queue', transferred: 'Application Reassigned'};
+    const requestLabels = {transcript: 'Request a Transcript', enrollment: 'Request Proof of Enrollment'};
+    const applicationTitles = {transcript: 'Transcript Request', enrollment: 'Proof of Enrollment Request'};
     const openStatus = status => ['pending', 'needs_materials'].includes(status);
-    const visible = user => user.role === 'admin' || (user.role === 'user' && user.identity === '学生');
+    const visible = user => user.role === 'admin' || (user.role === 'user' && user.identity === 'Student');
     const statusBadge = (catalog, status) => `<span class="badge ${colors[status] || ''}">${esc(catalog.statuses[status])}</span>`;
     const profile = (values, keys = Object.keys(fields)) => `<dl class="as-profile">${keys.map(key =>
-        `<div><dt>${fields[key]}</dt><dd>${esc(values[key] || '未登记')}</dd></div>`).join('')}</dl>`;
+        `<div><dt>${fields[key]}</dt><dd>${esc(values[key] || 'Not provided')}</dd></div>`).join('')}</dl>`;
 
     function profileInputs(values) {
         return `<div class="as-profile as-profile-inputs">${Object.entries(fields).map(([key, label]) =>
@@ -32,11 +34,11 @@ const adminServices = (function () {
         if (!registered) return '';
         const item = detail.application;
         const changed = Object.keys(fields).filter(key => registered[key] !== item.profile[key]);
-        return `<p class="small muted">提交账号：${esc(item.applicant_id)}</p>
-            ${changed.length ? `<h3>账号登记资料</h3><p class="small muted">以下登记资料与本次申请填写的内容不同，请核对。</p>
+        return `<p class="small muted">Submitted by: ${esc(item.applicant_id)}</p>
+            ${changed.length ? `<h3>Account Records</h3><p class="small muted">These account details differ from the information provided in the application. Review the differences before making a decision.</p>
                 ${profile(registered, changed)}` : ''}`;
     }
-    const fileHelp = limits => `支持 PDF、PNG、JPG；每次最多 ${limits.max_files} 份，每份不超过 ${limits.max_bytes / 1048576} MB。`;
+    const fileHelp = limits => `PDF, PNG, or JPG. Up to ${limits.max_files} files, ${limits.max_bytes / 1048576} MB each.`;
     const sizeLabel = bytes => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.ceil(bytes / 1024))} KB`;
     const download = (id, material) => `/api${applications}/${encodeURIComponent(id)}/materials/${encodeURIComponent(material.id)}`;
     const detailPath = id => `${applications}/${encodeURIComponent(id)}`;
@@ -49,8 +51,8 @@ const adminServices = (function () {
     const link = (url, text, style = 'btn secondary') => `<a class="${style}" href="${esc(url)}">${text}</a>`;
     const recordHref = (id, query) => href('detail/' + encodeURIComponent(id), query);
     const docDescriptions = {
-        transcript: '用于升学、交换、实习或奖学金申请，提供课程成绩记录。',
-        enrollment: '用于证明当前在校状态，常见于实习、资格审核和相关手续。',
+        transcript: 'Provides an official record of course grades for further study, exchanges, internships, or scholarships.',
+        enrollment: 'Confirms current enrollment for internships, eligibility checks, and other administrative purposes.',
     };
 
     function currentRoute(reviewer) {
@@ -80,20 +82,20 @@ const adminServices = (function () {
         const reviewer = state.user.role === 'admin';
         const route = currentRoute(reviewer);
         const [title, subtitle] = {
-            home: ['行政服务', reviewer ? '查看待办和最新申请，集中处理学生的成绩单与在校证明。' : '申请成绩单与在校证明，随时查看每一项办理进度。'],
-            apply: ['新建申请', '核对资料、选择文件类型，再填写用途和支持材料。'],
-            records: reviewer ? ['审批工作台', '筛选、查找并办理学生提交的申请。'] : ['我的申请', '按状态、类型或申请编号查找办理记录。'],
-            guide: reviewer ? ['审批指南', '按操作清单核对申请，并选择适合的处理结果。']
-                : ['办理指南', '了解申请条件、材料要求和常见问题。'],
-            detail: ['申请详情', '查看申请资料、附件和完整办理记录。'],
+            home: ['Administrative Services', reviewer ? 'Review transcript and proof-of-enrollment requests from students.' : 'Request transcripts and proof of enrollment, and track each application.'],
+            apply: ['New Application', 'Confirm your details, select a document type, and provide a purpose and any supporting documents.'],
+            records: reviewer ? ['Review Workspace', 'Search, filter, and review student applications.'] : ['My Applications', 'Find applications by status, type, or reference number.'],
+            guide: reviewer ? ['Review Guide', 'Use the checklist to verify applications and record a decision.']
+                : ['Application Guide', 'See eligibility, document requirements, and frequently asked questions.'],
+            detail: ['Application Details', 'View application details, attachments, and activity history.'],
         }[route.view];
-        const tabs = [['home', '服务首页'], ...(!reviewer ? [['apply', '新建申请']] : []),
-            ['records', reviewer ? '审批工作台' : '我的申请'], ['guide', reviewer ? '审批指南' : '办理指南']];
+        const tabs = [['home', 'Services Home'], ...(!reviewer ? [['apply', 'New Application']] : []),
+            ['records', reviewer ? 'Review Workspace' : 'My Applications'], ['guide', reviewer ? 'Review Guide' : 'Application Guide']];
         return `<div class="page-head"><div><div class="eyebrow">CAMPUS OPERATIONS / ADMIN SERVICES</div>
             <h1 id="as-page-title" tabindex="-1">${title}</h1><p class="subtitle">${subtitle}</p></div></div>
-            <nav class="as-nav" aria-label="行政服务导航">${tabs.map(([key, label]) => `<a href="${href(key === 'home' ? '' : key)}"
+            <nav class="as-nav" aria-label="Administrative services navigation">${tabs.map(([key, label]) => `<a href="${href(key === 'home' ? '' : key)}"
                 ${(route.view === key || (route.view === 'detail' && key === 'records')) ? 'aria-current="page"' : ''}>${label}</a>`).join('')}</nav>
-            <div id="as-portal"><p class="muted" role="status">正在加载行政服务…</p></div>`;
+            <div id="as-portal"><p class="muted" role="status">Loading Administrative Services…</p></div>`;
     }
 
     function recordRows(items, catalog, query) {
@@ -101,8 +103,8 @@ const adminServices = (function () {
             <span class="ticket-icon">${icon('ticket')}</span><span class="as-row-main">
                 <strong>${esc(catalog.types[item.document_type])}</strong>
                 <span class="small muted">${esc(item.id)}${catalog.mode === 'student' ? '' : ` · ${esc(item.name)} / ${esc(item.student_no)}`}</span>
-                <span class="small muted">更新于 ${date(item.updated)}${catalog.mode === 'reviewer'
-                    ? (item.reviewer_id ? ' · 经办：' + esc(item.reviewer_name || item.reviewer_id) : (openStatus(item.status) ? ' · 待领取' : '')) : ''}</span>
+                <span class="small muted">Updated  ${date(item.updated)}${catalog.mode === 'reviewer'
+                    ? (item.reviewer_id ? ' · Reviewer: ' + esc(item.reviewer_name || item.reviewer_id) : (openStatus(item.status) ? ' · Unassigned' : '')) : ''}</span>
             </span>${statusBadge(catalog, item.status)}${icon('arrow')}
         </a></li>`).join('')}</ul>`;
     }
@@ -111,76 +113,76 @@ const adminServices = (function () {
         const reviewer = catalog.mode === 'reviewer';
         const statusIcons = {pending: 'clock', needs_materials: 'ticket', approved: 'check', rejected: 'box', cancelled: 'logout'};
         return `<section class="as-hero"><div><div class="eyebrow">STUDENT DOCUMENT SERVICES</div>
-            <h2>${reviewer ? '学生申请处理中心' : '校园证明，一处办理'}</h2>
-            <p>${reviewer ? '从待审批队列开始，核对申请资料并记录办理结果。' : '从提交到补交、审批，办理记录集中保存在这里。'}</p>
-            <div class="as-actions">${reviewer ? link(href('records', {status: 'pending'}), '处理待审批 ' + icon('arrow'), 'btn')
-                : link(href('apply'), icon('plus') + ' 新建申请', 'btn')}${link(href('guide'), reviewer ? '查看审批指南' : '查看办理指南')}</div>
+            <h2>${reviewer ? 'Student Application Review' : 'Academic Document Requests'}</h2>
+            <p>${reviewer ? 'Open the review queue to verify application details and record decisions.' : 'Submit requests, upload documents, and check decisions.'}</p>
+            <div class="as-actions">${reviewer ? link(href('records', {status: 'pending'}), 'Review Pending Applications ' + icon('arrow'), 'btn')
+                : link(href('apply'), icon('plus') + ' New Application', 'btn')}${link(href('guide'), reviewer ? 'View Review Guide' : 'View Application Guide')}</div>
             </div><span class="as-hero-icon" aria-hidden="true">${icon('ticket')}</span></section>
-            <div class="as-metrics" aria-label="申请状态概览">${Object.entries(catalog.statuses).map(([key, label]) =>
+            <div class="as-metrics" aria-label="Application Status Overview">${Object.entries(catalog.statuses).map(([key, label]) =>
                 `<a class="stat as-metric" href="${href('records', {status: key})}"><div class="stat-top">${esc(label)}
                 <span class="stat-icon">${icon(statusIcons[key])}</span></div><div class="stat-value">${data.counts[key]}</div>
-                <div class="stat-foot">查看记录 ${icon('arrow')}</div></a>`).join('')}</div>
-            ${reviewer ? `<section class="card as-queue-overview" aria-label="个人待办">
-                <div><h2>我的待办</h2><p class="subtitle">只统计当前待审批的申请，补交后会回到经办人队列。</p></div>
-                <div class="as-actions">${link(href('records', {status: 'pending', owner: 'mine'}), '我负责的 · ' + data.workload.mine)}
-                    ${link(href('records', {status: 'pending', owner: 'unassigned'}), '待领取 · ' + data.workload.unassigned)}</div>
+                <div class="stat-foot">View Records ${icon('arrow')}</div></a>`).join('')}</div>
+            ${reviewer ? `<section class="card as-queue-overview" aria-label="My Queue">
+                <div><h2>My Queue</h2><p class="subtitle">This queue counts pending applications. Resubmitted applications return to the assigned reviewer.</p></div>
+                <div class="as-actions">${link(href('records', {status: 'pending', owner: 'mine'}), 'Assigned to Me · ' + data.workload.mine)}
+                    ${link(href('records', {status: 'pending', owner: 'unassigned'}), 'Unassigned · ' + data.workload.unassigned)}</div>
                 </section>` : `<div class="as-service-grid">${Object.entries(catalog.types).map(([key, title]) =>
                 `<section class="card as-service"><div class="card-body"><span class="ticket-icon">${icon('ticket')}</span>
                 <h2>${esc(title)}</h2><p class="subtitle">${esc(docDescriptions[key])}</p>
-                ${link(href('apply', {type: key}), '申请' + esc(title) + ' ' + icon('arrow'))}</div></section>`).join('')}</div>`}
-            <section class="card"><div class="card-head"><div><h2>最近办理</h2><p>按最后更新时间排列</p></div>
-                ${link(href('records', {status: 'all'}), '查看全部 ' + icon('arrow'), 'linkbtn')}</div>
+                ${link(href('apply', {type: key}), (requestLabels[key] || 'Start an Application') + ' ' + icon('arrow'))}</div></section>`).join('')}</div>`}
+            <section class="card"><div class="card-head"><div><h2>Recent Applications</h2><p>Sorted by most recent update</p></div>
+                ${link(href('records', {status: 'all'}), 'View All ' + icon('arrow'), 'linkbtn')}</div>
             <div class="card-body">${data.recent.length ? recordRows(data.recent, catalog, {status: 'all'})
-                : '<p class="empty">暂无办理记录。</p>'}</div></section>`;
+                : '<p class="empty">No applications yet.</p>'}</div></section>`;
     }
 
     function steps() {
-        return `<ol class="as-steps"><li><strong>提交申请</strong><p>确认个人资料和办理用途，按需附上材料。</p></li>
-            <li><strong>等待审批</strong><p>管理员核对资料；收到补交要求后可继续提交材料。</p></li>
-            <li><strong>查看结果</strong><p>打开申请详情，查看审批状态和说明。</p></li></ol>`;
+        return `<ol class="as-steps"><li><strong>Submit Application</strong><p>Confirm your details and purpose, and attach documents if needed.</p></li>
+            <li><strong>Await Review</strong><p>A reviewer will check your details and may request additional documents.</p></li>
+            <li><strong>Check the Decision</strong><p>Open an application to see its status and any reviewer comments.</p></li></ol>`;
     }
 
     function studentGuide(catalog) {
         const questions = [
-            ['成绩单和在校证明有什么区别？', '成绩单用于说明课程成绩；在校证明用于说明当前在校状态。请按接收方要求选择。'],
-            ['账号自动带入的资料有误怎么办？', '学生可以在新建申请时直接修改或补填。更正仅用于当前申请，管理员审批时可以核对账号登记资料。'],
-            ['材料有哪些要求？', fileHelp(catalog.materials) + ' 首次提交可按需附加材料；收到补交要求后，至少提交一份。'],
-            ['收到补交要求后怎么操作？', '在「我的申请」选择「待补交材料」，打开详情阅读审批意见，再上传补充材料。提交后会重新进入审批。'],
-            ['提交后可以取消吗？', '待审批或待补交材料时，可以在本人申请详情的「当前状态」下取消。取消后仍可查看记录，如需继续办理请重新申请。'],
-            ['审批通过后能下载正式文件吗？', '本门户显示办理状态和审批意见。正式文件的签发和领取按学校规定办理。'],
+            ['What is the difference between a transcript and proof of enrollment?', 'A transcript lists your course grades. Proof of enrollment confirms that you are currently enrolled. Choose the document your recipient requires.'],
+            ['What if the details copied from my account are incorrect?', 'You can correct or complete these details in the application. Changes apply only to that request. Reviewers can compare them with your account records.'],
+            ['What documents do I need to upload?', fileHelp(catalog.materials) + ' Attachments are optional when you first apply. If a reviewer requests more documents, upload at least one file.'],
+            ['How do I submit additional documents?', 'In My Applications, select Awaiting Documents. Open the request, read the reviewer’s instructions, and upload the files to return it to the review queue.'],
+            ['Can I cancel an application after submitting it?', 'You can cancel under Current Status while the application is pending review or awaiting documents. The record remains available. Submit a new request to proceed.'],
+            ['Can I download the official document after approval?', 'The portal shows application status and reviewer comments. Official documents are issued and collected in accordance with university policy.'],
         ];
-        return `<div class="as-layout as-workspace"><section class="card"><div class="card-head"><div><h2>常见问题</h2><p>点击问题展开说明</p></div></div>
+        return `<div class="as-layout as-workspace"><section class="card"><div class="card-head"><div><h2>Frequently Asked Questions</h2><p>Select a question to view the answer.</p></div></div>
             <div class="card-body as-faq">${questions.map(([q, a]) => `<details><summary>${q}</summary><p>${esc(a)}</p></details>`).join('')}</div></section>
-            <aside class="card"><div class="card-head"><div><h2>办理流程</h2><p>从申请到结果</p></div></div><div class="card-body">${steps()}
-                ${link(href('apply'), '开始申请', 'btn')}</div></aside></div>`;
+            <aside class="card"><div class="card-head"><div><h2>Application Process</h2><p>From submission to decision</p></div></div><div class="card-body">${steps()}
+                ${link(href('apply'), 'Start an Application', 'btn')}</div></aside></div>`;
     }
 
     function reviewerGuide(catalog) {
         const checklist = [
-            ['clock', '领取待办', '从公共队列打开申请并领取经办。已由同事领取的申请，可请对方转交。'],
-            ['search', '核对申请资料', '核对提交账号、姓名、学号和文件类型。若详情列出不同的账号登记值，请先核实差异，再检查材料是否清晰、齐全。'],
-            ['check', '记录审批结果', '按右侧说明选择处理结果。退回或驳回时，审批说明会显示给学生，请写明需要补交的材料或未通过原因。'],
-            ['users', '交接或跟进补件', '转交给同事时可填写仅管理员可见的交接说明。学生补交后，申请会重新进入原经办人的待审批队列。'],
+            ['clock', 'Claim an Application', 'Open an application in the shared queue and claim it. If a colleague already owns it, ask them to reassign it.'],
+            ['search', 'Verify Application Details', 'Verify the account, name, student ID, and document type. Resolve any discrepancies with account records and check that the attachments are readable and complete.'],
+            ['check', 'Record a Decision', 'Choose a decision using the guidance provided. When requesting more documents or rejecting an application, explain the reason clearly for the student.'],
+            ['users', 'Reassign or Follow Up', 'Add an internal note when reassigning an application. Resubmissions return to the original reviewer’s queue.'],
         ];
         const decisions = [
-            ['approved', '资料、申请类型和材料均已核实，可保存为通过。'],
-            ['needs_materials', '材料缺失或资料需要核对时退回，例如：“请补交能清楚显示学号的材料。”'],
-            ['rejected', '确认申请不符合办理条件时驳回，并说明原因或可咨询的部门。'],
+            ['approved', 'Approve once the details, document type, and attachments have been verified.'],
+            ['needs_materials', 'Request more documents when information is missing or needs verification. For example, ask for a document that clearly shows the student ID.'],
+            ['rejected', 'Reject ineligible applications. Explain why and, where possible, direct the student to the appropriate department.'],
         ];
         return `<div class="as-layout as-workspace">
-            <section class="card"><div class="card-head"><h2>审批操作清单</h2></div>
+            <section class="card"><div class="card-head"><h2>Review Checklist</h2></div>
                 <div class="card-body"><ol class="as-review-checklist">${checklist.map(([symbol, title, description]) =>
                     `<li><span class="ticket-icon">${icon(symbol)}</span><div><h3>${title}</h3><p>${description}</p></div></li>`).join('')}</ol>
-                    <div class="as-actions">${link(href('records', {status: 'pending', owner: 'unassigned'}), '打开待领取队列', 'btn')}
-                        ${link(href('records', {status: 'pending', owner: 'mine'}), '查看我的待办')}</div></div></section>
-            <aside class="card"><div class="card-head"><h2>怎么选择审批结果</h2></div>
+                    <div class="as-actions">${link(href('records', {status: 'pending', owner: 'unassigned'}), 'Open Unassigned Queue', 'btn')}
+                        ${link(href('records', {status: 'pending', owner: 'mine'}), 'View My Queue')}</div></div></section>
+            <aside class="card"><div class="card-head"><h2>Decision Guidance</h2></div>
                 <div class="card-body"><ul class="as-decision-guide">${decisions.map(([status, description]) =>
                     `<li>${statusBadge(catalog, status)}<p>${description}</p></li>`).join('')}</ul></div></aside>
             </div>`;
     }
 
     function fileField(id, limits, required = false) {
-        return `<label for="${id}">${required ? '补交材料 *' : '支持材料（选填）'}</label>
+        return `<label for="${id}">${required ? 'Additional Documents *' : 'Supporting Documents (optional)'}</label>
             <input id="${id}" name="materials" type="file" multiple ${required ? 'required' : ''}
                 accept="${limits.extensions.map(ext => '.' + esc(ext)).join(',')}" aria-describedby="${id}-help">
             <p id="${id}-help" class="small muted as-hint">${fileHelp(limits)}</p>`;
@@ -188,20 +190,20 @@ const adminServices = (function () {
 
     function applyCard(catalog, type) {
         return `<section class="card" aria-labelledby="as-apply-title">
-            <div class="card-head"><div><h2 id="as-apply-title">发起申请</h2><p>已从校园账号带入资料，可直接补填或修改，仅用于本次申请。</p></div>${icon('ticket')}</div>
+            <div class="card-head"><div><h2 id="as-apply-title">Start an Application</h2><p>Details from your campus account are prefilled. You can edit them for this application.</p></div>${icon('ticket')}</div>
             <div class="card-body">
                 <form id="as-apply-form" class="as-form">
                     ${profileInputs(catalog.profile)}
-                    <label for="as-type">文件类型 *</label>
-                    <select id="as-type" name="document_type" required><option value="">请选择文件类型</option>
+                    <label for="as-type">Document Type *</label>
+                    <select id="as-type" name="document_type" required><option value="">Select a document type</option>
                         ${Object.entries(catalog.types).map(([key, title]) => `<option value="${esc(key)}" ${key === type ? 'selected' : ''}>${esc(title)}</option>`).join('')}
                     </select>
                     <p class="small muted as-hint" id="as-type-hint"></p>
-                    <label for="as-purpose">申请用途 *</label>
-                    <textarea id="as-purpose" name="purpose" maxlength="300" rows="3" required placeholder="例如：用于实习申请"></textarea>
+                    <label for="as-purpose">Purpose *</label>
+                    <textarea id="as-purpose" name="purpose" maxlength="300" rows="3" required placeholder="e.g., required for an internship application"></textarea>
                     ${fileField('as-files', catalog.materials)}
                     <p class="error as-error" role="alert"></p>
-                    <button class="btn" type="submit">${icon('plus')} 提交申请</button>
+                    <button class="btn" type="submit">${icon('plus')} Submit Application</button>
                 </form>
             </div></section>`;
     }
@@ -210,29 +212,29 @@ const adminServices = (function () {
         const reviewer = catalog.mode === 'reviewer';
         const selected = query.status === 'all' ? '' : query.status || (reviewer ? 'pending' : '');
         return `<section class="card" aria-labelledby="as-list-title">
-            <div class="card-head"><div><h2 id="as-list-title">申请记录</h2>
-            <p>${reviewer ? '打开记录核对资料并办理。' : '打开记录查看审批说明及已提交的材料。'}</p></div>
-            ${reviewer ? '' : link(href('apply'), icon('plus') + ' 新建申请', 'btn')}</div>
+            <div class="card-head"><div><h2 id="as-list-title">Applications</h2>
+            <p>${reviewer ? 'Open an application to verify details and record a decision.' : 'Open an application to view reviewer comments and submitted documents.'}</p></div>
+            ${reviewer ? '' : link(href('apply'), icon('plus') + ' New Application', 'btn')}</div>
             <div class="card-body">
                 <form class="as-controls" id="as-filters">
-                    <div><label for="as-search">申请编号</label>
-                    <input id="as-search" name="q" value="${esc(query.q)}" maxlength="24" placeholder="例如 AS-4D2…" spellcheck="false"></div>
-                    <div><label for="as-status">申请状态</label>
-                    <select id="as-status" name="status"><option value="">全部状态</option>
+                    <div><label for="as-search">Application Reference</label>
+                    <input id="as-search" name="q" value="${esc(query.q)}" maxlength="24" placeholder="e.g., AS-4D2…" spellcheck="false"></div>
+                    <div><label for="as-status">Application Status</label>
+                    <select id="as-status" name="status"><option value="">All Statuses</option>
                         ${Object.entries(catalog.statuses).map(([key, title]) => `<option value="${esc(key)}" ${selected === key ? 'selected' : ''}>${esc(title)}</option>`).join('')}
                     </select></div>
-                    <div><label for="as-filter-type">文件类型</label>
-                    <select id="as-filter-type" name="type"><option value="">全部类型</option>
+                    <div><label for="as-filter-type">Document Type</label>
+                    <select id="as-filter-type" name="type"><option value="">All Types</option>
                         ${Object.entries(catalog.types).map(([key, title]) => `<option value="${esc(key)}" ${query.type === key ? 'selected' : ''}>${esc(title)}</option>`).join('')}
                     </select></div>
-                    ${reviewer ? `<div><label for="as-owner">经办人</label>
-                    <select id="as-owner" name="owner"><option value="">全部经办人</option>
-                        <option value="mine" ${query.owner === 'mine' ? 'selected' : ''}>我负责的</option>
-                        <option value="unassigned" ${query.owner === 'unassigned' ? 'selected' : ''}>待领取</option>
+                    ${reviewer ? `<div><label for="as-owner">Reviewer</label>
+                    <select id="as-owner" name="owner"><option value="">All Reviewers</option>
+                        <option value="mine" ${query.owner === 'mine' ? 'selected' : ''}>Assigned to Me</option>
+                        <option value="unassigned" ${query.owner === 'unassigned' ? 'selected' : ''}>Unassigned</option>
                     </select></div>` : ''}
-                    <button class="btn" type="submit">查询</button>
-                    ${link(href('records', {status: 'all'}), '清空筛选')}
-                    <button class="btn secondary" id="as-refresh" type="button">刷新列表</button>
+                    <button class="btn" type="submit">Search</button>
+                    ${link(href('records', {status: 'all'}), 'Clear Filters')}
+                    <button class="btn secondary" id="as-refresh" type="button">Refresh List</button>
                 </form>
                 <p id="as-filter-error" class="error as-error" role="alert"></p>
                 <div id="as-results" aria-live="polite"></div>
@@ -243,17 +245,17 @@ const adminServices = (function () {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve({filename: file.name, data: reader.result.split(',')[1]});
-            reader.onerror = reader.onabort = () => reject(new Error('读取材料失败，请重新选择文件'));
+            reader.onerror = reader.onabort = () => reject(new Error('Could not read the attachment. Select the file again.'));
             reader.readAsDataURL(file);
         });
     }
 
     async function selectedFiles(input, limits) {
         const files = [...input.files];
-        if (files.length > limits.max_files) throw new Error(`每次最多上传 ${limits.max_files} 份材料`);
+        if (files.length > limits.max_files) throw new Error(`Upload up to  ${limits.max_files}  files`);
         for (const file of files) {
-            if (!file.size || file.size > limits.max_bytes) throw new Error(`请选择非空文件，每份不超过 ${limits.max_bytes / 1048576} MB`);
-            if (!limits.extensions.includes(file.name.split('.').pop().toLowerCase())) throw new Error('材料仅支持 PDF、PNG、JPG');
+            if (!file.size || file.size > limits.max_bytes) throw new Error(`Choose non-empty files of up to  ${limits.max_bytes / 1048576} MB`);
+            if (!limits.extensions.includes(file.name.split('.').pop().toLowerCase())) throw new Error('Attachments must be PDF, PNG, or JPG.');
         }
         return Promise.all(files.map(readFile));
     }
@@ -284,24 +286,24 @@ const adminServices = (function () {
         const open = openStatus(detail.application.status);
         const internalEvents = detail.events.filter(event => Object.prototype.hasOwnProperty.call(assignmentLabels, event.action));
         const choices = detail.reviewers || [];
-        return `<section class="detail-box as-detail as-assignment"><h2>经办协作</h2>
+        return `<section class="detail-box as-detail as-assignment"><h2>Reviewer Assignment</h2>
             <p class="as-assignee">${reviewer ? `<strong>${esc(reviewer.name || reviewer.id)}</strong> <span class="small muted">(${esc(reviewer.id)})</span>
-                ${mine ? '<span class="badge green">由我经办</span>' : ''}`
-                : '<span class="badge orange">' + (open ? '待领取' : '无启用的经办人') + '</span>'}</p>
-            ${open && !reviewer ? `<p class="small muted">${inactive ? '原经办人已不可办理，其他管理员可重新领取。' : '领取后由你负责审批，也可以转交给其他管理员。'}</p>
+                ${mine ? '<span class="badge green">Assigned to Me</span>' : ''}`
+                : '<span class="badge orange">' + (open ? 'Unassigned' : 'No Active Reviewer') + '</span>'}</p>
+            ${open && !reviewer ? `<p class="small muted">${inactive ? 'The previous reviewer is no longer available. Another administrator can claim the application.' : 'Claim the application to review it or reassign it to another administrator.'}</p>
                 <form class="as-form" id="as-assignment"><p class="error as-error" role="alert"></p>
-                    <button type="submit" class="btn secondary" value="claim">${inactive ? '重新领取' : '领取经办'}</button></form>` : ''}
+                    <button type="submit" class="btn secondary" value="claim">${inactive ? 'Reclaim Application' : 'Claim Application'}</button></form>` : ''}
             ${open && mine ? `<form class="as-form" id="as-assignment">
-                ${choices.length ? `<label for="as-transfer-to">转交给</label><select id="as-transfer-to" name="reviewer_id"><option value="">请选择管理员</option>
-                    ${choices.map(person => `<option value="${esc(person.id)}">${esc(person.name || person.id)}（${esc(person.id)}）</option>`).join('')}</select>` : ''}
-                <label for="as-handoff-note">交接说明（选填，仅管理人员可见）</label>
+                ${choices.length ? `<label for="as-transfer-to">Assign To</label><select id="as-transfer-to" name="reviewer_id"><option value="">Select an administrator</option>
+                    ${choices.map(person => `<option value="${esc(person.id)}">${esc(person.name || person.id)} (${esc(person.id)})</option>`).join('')}</select>` : ''}
+                <label for="as-handoff-note">Handoff Note (optional, administrators only)</label>
                 <textarea id="as-handoff-note" name="note" maxlength="300" rows="2"></textarea>
                 <p class="error as-error" role="alert"></p><div class="as-actions">
-                    ${choices.length ? '<button type="submit" class="btn secondary" value="transfer">转交申请</button>' : ''}
-                    <button type="submit" class="btn secondary" value="release">交回待领取</button>
+                    ${choices.length ? '<button type="submit" class="btn secondary" value="transfer">Reassign Application</button>' : ''}
+                    <button type="submit" class="btn secondary" value="release">Return to Unassigned Queue</button>
                 </div></form>` : ''}
-            ${open && reviewer && !mine ? '<p class="notice">此申请由其他管理员经办。需接手时，请联系当前经办人转交。</p>' : ''}
-            ${internalEvents.length ? `<details class="as-handoff-history"><summary>交接记录（${internalEvents.length}）</summary>
+            ${open && reviewer && !mine ? '<p class="notice">Another administrator is reviewing this application. Contact them if you need it reassigned.</p>' : ''}
+            ${internalEvents.length ? `<details class="as-handoff-history"><summary>Assignment History (${internalEvents.length})</summary>
                 <ol class="timeline as-timeline">${internalEvents.map(event => `<li class="timeline-item">
                     <strong>${assignmentLabels[event.action]}</strong> <span class="small muted">${esc(event.actor_id)} · ${date(event.created)}</span>
                     <p class="as-note">${esc(event.note)}</p></li>`).join('')}</ol></details>` : ''}</section>`;
@@ -315,52 +317,52 @@ const adminServices = (function () {
         const publicEvents = events.filter(event => !Object.prototype.hasOwnProperty.call(assignmentLabels, event.action));
         panel.innerHTML = `
             <div class="as-layout as-workspace"><div class="as-stack"><div class="detail-box as-detail">
-            <h3>申请资料</h3>${profile(item.profile)}${reviewer ? accountComparison(detail) : ''}
-            <h3>申请用途</h3><p class="as-note">${esc(item.purpose)}</p></div>
-            <section class="detail-box as-detail"><h2>办理进度</h2>
+            <h3>Applicant Details</h3>${profile(item.profile)}${reviewer ? accountComparison(detail) : ''}
+            <h3>Purpose</h3><p class="as-note">${esc(item.purpose)}</p></div>
+            <section class="detail-box as-detail"><h2>Application History</h2>
                 <ol class="timeline as-timeline">${publicEvents.map(event => `<li class="timeline-item">
                     <strong>${eventLabels[event.action] || esc(event.action)}</strong>
                     <div class="small muted">${date(event.created)}</div>
                     ${event.note ? `<p class="as-note">${esc(event.note)}</p>` : ''}
                     ${materials.filter(file => file.event_id === event.id).map(file => `<a class="as-download" href="${download(item.id, file)}">${esc(file.filename)} <span class="small muted">· ${sizeLabel(file.size)}</span></a>`).join('')}
                 </li>`).join('')}</ol>
-            </section></div><aside class="as-stack"><section class="detail-box as-detail"><h2>当前状态</h2>
+            </section></div><aside class="as-stack"><section class="detail-box as-detail"><h2>Current Status</h2>
                 <div class="as-detail-status">${statusBadge(catalog, item.status)}</div>
-                <p class="small muted">提交于 ${date(item.created)} · 更新于 ${date(item.updated)}</p>
+                <p class="small muted">Submitted  ${date(item.created)} · Updated  ${date(item.updated)}</p>
                 <p class="small muted">${esc({
-                    pending: reviewer ? '核对申请资料及材料后，选择审批结果。' : '申请已进入审批队列，请稍后回来查看结果。',
-                    needs_materials: reviewer ? '等待学生补交材料。' : '请阅读办理进度中的补交要求，然后上传材料。',
-                    approved: '已通过审批，办理记录可继续查看。',
-                    rejected: '本次申请未通过，具体原因见办理记录。',
-                    cancelled: reviewer ? '学生已取消，本次申请无需再处理。' : '本次申请已取消。如需继续办理，请重新发起申请。',
+                    pending: reviewer ? 'Verify the application and documents before recording a decision.' : 'Your application is in the review queue. Check back for a decision.',
+                    needs_materials: reviewer ? 'Waiting for the student to provide additional documents.' : 'Read the reviewer’s instructions in the application history and upload the requested documents.',
+                    approved: 'Your application was approved. The record remains available.',
+                    rejected: 'The application was rejected. See the application history for the reason.',
+                    cancelled: reviewer ? 'The student canceled this application. No further action is required.' : 'This application was canceled. Submit a new request if needed.',
                 }[item.status])}</p>
                 ${!reviewer && openStatus(item.status) ? `<details class="as-cancel">
-                    <summary class="btn danger">取消申请</summary>
+                    <summary class="btn danger">Cancel Application</summary>
                     <form class="as-form" id="as-cancel-form">
-                        <p>取消后将停止办理，原申请记录仍可查看。确定取消吗？</p>
+                        <p>Canceling stops the review, but the record remains available. Cancel this application?</p>
                         <p class="error as-error" role="alert"></p>
-                        <div class="as-actions"><button type="submit" class="btn danger">确认取消申请</button>
-                            <button type="button" class="btn secondary" id="as-keep-application">保留申请</button></div>
+                        <div class="as-actions"><button type="submit" class="btn danger">Confirm Cancellation</button>
+                            <button type="button" class="btn secondary" id="as-keep-application">Keep Application</button></div>
                     </form></details>` : ''}
             </section>
             ${reviewer ? assignmentCard(detail) : ''}
-            ${canDecide ? `<section class="detail-box as-detail"><h2>审批操作</h2>
-                ${!assignment.reviewer ? '<p class="small muted">直接保存审批结果也会将你登记为经办人。</p>' : ''}
+            ${canDecide ? `<section class="detail-box as-detail"><h2>Review Decision</h2>
+                ${!assignment.reviewer ? '<p class="small muted">Saving a decision also assigns you as the reviewer.</p>' : ''}
                 <form class="as-form" id="as-decision">
-                    <label for="as-decision-value">处理结果 *</label>
-                    <select id="as-decision-value" name="decision" required><option value="">请选择处理结果</option>
-                        <option value="approved">通过</option><option value="needs_materials">退回补充材料</option><option value="rejected">不通过</option>
+                    <label for="as-decision-value">Decision *</label>
+                    <select id="as-decision-value" name="decision" required><option value="">Select a decision</option>
+                        <option value="approved">Approve</option><option value="needs_materials">Request Additional Documents</option><option value="rejected">Reject</option>
                     </select>
-                    <label for="as-decision-note">审批说明（退回或不通过时必填）</label>
+                    <label for="as-decision-note">Reviewer Comments (required for document requests or rejection)</label>
                     <textarea id="as-decision-note" name="note" maxlength="500" rows="3"></textarea>
-                    <p class="error as-error" role="alert"></p><button type="submit" class="btn">保存审批结果</button>
+                    <p class="error as-error" role="alert"></p><button type="submit" class="btn">Save Decision</button>
                 </form></section>` : ''}
-            ${!reviewer && item.status === 'needs_materials' ? `<section class="detail-box as-detail"><h2>补交材料</h2>
+            ${!reviewer && item.status === 'needs_materials' ? `<section class="detail-box as-detail"><h2>Additional Documents</h2>
                 <form class="as-form" id="as-supplement">
                     ${fileField('as-extra-files', catalog.materials, true)}
-                    <label for="as-supplement-note">补充说明（选填）</label>
+                    <label for="as-supplement-note">Additional Notes (optional)</label>
                     <textarea id="as-supplement-note" name="note" maxlength="500" rows="3"></textarea>
-                    <p class="error as-error" role="alert"></p><button type="submit" class="btn">提交补充材料</button>
+                    <p class="error as-error" role="alert"></p><button type="submit" class="btn">Submit Additional Documents</button>
                 </form></section>` : ''}</aside></div>`;
         const decisionForm = panel.querySelector('#as-decision');
         if (decisionForm) {
@@ -377,16 +379,16 @@ const adminServices = (function () {
             }
         };
         bindForm(decisionForm, (inputs, active) =>
-            update('/decision', {decision: inputs.decision.value, note: inputs.note.value}, '已保存审批结果', active));
+            update('/decision', {decision: inputs.decision.value, note: inputs.note.value}, 'Decision saved.', active));
         bindForm(panel.querySelector('#as-assignment'), (inputs, active, button) => {
             const operation = button.value;
             const reviewerId = inputs.reviewer_id?.value;
-            if (operation === 'transfer' && !reviewerId) throw new Error('请先选择要转交的管理员');
+            if (operation === 'transfer' && !reviewerId) throw new Error('Select an administrator before reassigning.');
             return update('/assignment', {operation, reviewer_id: reviewerId, note: inputs.note?.value || ''},
-                {claim: '已领取申请', release: '已交回待领取队列', transfer: '已转交申请'}[operation], active);
+                {claim: 'Application claimed.', release: 'Application returned to the unassigned queue.', transfer: 'Application reassigned.'}[operation], active);
         });
         bindForm(panel.querySelector('#as-supplement'), async (inputs, active) =>
-            update('/materials', {note: inputs.note.value, materials: await selectedFiles(inputs.materials, catalog.materials)}, '已补交材料，申请重新进入审批', active));
+            update('/materials', {note: inputs.note.value, materials: await selectedFiles(inputs.materials, catalog.materials)}, 'Documents submitted. The application is back in review.', active));
         const keep = panel.querySelector('#as-keep-application');
         if (keep) {
             keep.onclick = () => {
@@ -396,39 +398,39 @@ const adminServices = (function () {
             };
         }
         bindForm(panel.querySelector('#as-cancel-form'), (_, active) =>
-            update('/cancel', {}, '申请已取消', active));
+            update('/cancel', {}, 'Application canceled.', active));
     }
 
     function bindDetail(portal, route, catalog) {
         const id = route.id;
         portal.innerHTML = `<div class="as-detail-bar"><div><span class="eyebrow">APPLICATION NO.</span><div id="as-detail-id" class="mono">${esc(id)}</div></div>
-            <div class="as-actions">${link(href('records', route.query), catalog.mode === 'reviewer' ? '返回审批工作台' : '返回我的申请')}
-            <button type="button" class="btn secondary" id="as-copy-id">复制编号</button>
-            <button type="button" class="btn secondary" id="as-refresh-detail">刷新详情</button></div></div>
+            <div class="as-actions">${link(href('records', route.query), catalog.mode === 'reviewer' ? 'Back to Review Workspace' : 'Back to My Applications')}
+            <button type="button" class="btn secondary" id="as-copy-id">Copy Reference</button>
+            <button type="button" class="btn secondary" id="as-refresh-detail">Refresh Details</button></div></div>
             <div id="as-detail-body" aria-live="polite"></div>`;
         const panel = portal.querySelector('#as-detail-body');
         const refresh = portal.querySelector('#as-refresh-detail');
         portal.querySelector('#as-copy-id').onclick = async () => {
             try {
                 await navigator.clipboard.writeText(id);
-                toast('申请编号已复制');
+                toast('Application reference copied.');
             } catch {
                 const selection = window.getSelection();
                 const range = document.createRange();
                 range.selectNodeContents(portal.querySelector('#as-detail-id'));
                 selection.removeAllRanges();
                 selection.addRange(range);
-                toast('已选中编号，可手动复制');
+                toast('The reference is selected. You can copy it manually.');
             }
         };
         async function reload() {
             if (!panel.isConnected) return;
             refresh.disabled = true;
-            panel.innerHTML = '<p class="muted">正在加载申请…</p>';
+            panel.innerHTML = '<p class="muted">Loading applications…</p>';
             try {
                 const detail = await api(detailPath(id));
                 if (!panel.isConnected) return;
-                $('#as-page-title').textContent = catalog.types[detail.application.document_type] + '申请';
+                $('#as-page-title').textContent = applicationTitles[detail.application.document_type] || 'Application Details';
                 applicationDetails(panel, detail, catalog, reload);
             } catch (err) {
                 panel.textContent = err.message;
@@ -451,7 +453,7 @@ const adminServices = (function () {
         async function loadList() {
             if (!portal.isConnected) return;
             const current = ++request;
-            results.innerHTML = '<p class="muted">正在加载申请…</p>';
+            results.innerHTML = '<p class="muted">Loading applications…</p>';
             try {
                 const params = new URLSearchParams({...query, status: query.status === 'all' ? '' : query.status, page: pageNumber});
                 const data = await api(applications + '?' + params);
@@ -465,10 +467,10 @@ const adminServices = (function () {
                 }
                 results.innerHTML = data.applications.length ? `
                     ${recordRows(data.applications, catalog, query)}
-                    <div class="flex between as-pagination"><span class="small muted">共 ${data.total} 条 · 第 ${pageNumber} / ${lastPage} 页</span>
-                        <div class="flex">${pageNumber > 1 ? link(href('records', {...query, page: pageNumber > 2 ? pageNumber - 1 : ''}), '上一页') : ''}
-                        ${pageNumber < lastPage ? link(href('records', {...query, page: pageNumber + 1}), '下一页') : ''}</div></div>`
-                    : '<p class="empty">当前没有符合条件的申请。</p>';
+                    <div class="flex between as-pagination"><span class="small muted">Total:  ${data.total}  results · Page  ${pageNumber} / ${lastPage} </span>
+                        <div class="flex">${pageNumber > 1 ? link(href('records', {...query, page: pageNumber > 2 ? pageNumber - 1 : ''}), 'Previous') : ''}
+                        ${pageNumber < lastPage ? link(href('records', {...query, page: pageNumber + 1}), 'Next') : ''}</div></div>`
+                    : '<p class="empty">No applications match your filters.</p>';
             } catch (err) {
                 if (current === request && portal.isConnected) results.textContent = err.message;
             }
@@ -480,7 +482,7 @@ const adminServices = (function () {
             const error = portal.querySelector('#as-filter-error');
             values.q = values.q.trim();
             if (!/^[a-z0-9-]{0,24}$/i.test(values.q)) {
-                error.textContent = '申请编号只能包含字母、数字和连字符。';
+                error.textContent = 'Application references may contain only letters, numbers, and hyphens.';
                 return;
             }
             error.textContent = '';
@@ -494,8 +496,8 @@ const adminServices = (function () {
 
     function bindApply(portal, route, catalog) {
         portal.innerHTML = `<div class="as-layout as-workspace">${applyCard(catalog, route.query.type)}
-            <aside class="card"><div class="card-head"><div><h2>办理流程</h2><p>提交前可先核对所需资料</p></div></div>
-                <div class="card-body">${steps()}${link(href('guide'), '查看办理指南 ' + icon('arrow'))}</div></aside></div>`;
+            <aside class="card"><div class="card-head"><div><h2>Application Process</h2><p>Check the requirements before submitting.</p></div></div>
+                <div class="card-body">${steps()}${link(href('guide'), 'View Application Guide ' + icon('arrow'))}</div></aside></div>`;
         const form = portal.querySelector('#as-apply-form');
         const typeHint = () => {
             portal.querySelector('#as-type-hint').textContent = docDescriptions[form.elements.document_type.value] || '';
@@ -512,7 +514,7 @@ const adminServices = (function () {
             if (!active()) return;
             const result = await api(applications, payload);
             if (!active()) return;
-            toast('申请已提交，可在「我的申请」查看进度');
+            toast('Application submitted. Track it in My Applications.');
             location.hash = recordHref(result.id);
         });
     }
@@ -534,7 +536,7 @@ const adminServices = (function () {
             else bindDetail(portal, route, catalog);
         } catch (err) {
             if (portal.isConnected) {
-                portal.innerHTML = '<p class="error" role="alert"></p><button type="button" class="btn secondary">重新加载</button>';
+                portal.innerHTML = '<p class="error" role="alert"></p><button type="button" class="btn secondary">Reload</button>';
                 portal.querySelector('p').textContent = err.message;
                 portal.querySelector('button').onclick = bind;
             }

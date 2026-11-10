@@ -3,12 +3,12 @@
 import hashlib
 
 PEOPLE = [
-    ("student", "演示学生", "user", "学生", "D1-201", ""),
-    ("teacher", "演示教师", "user", "教师", "", ""),
-    ("tech", "电工维修员", "technician", "维修人员", "", "电工"),
-    ("plumber", "水务维修员", "technician", "维修人员", "", "水务"),
-    ("it", "IT 维修员", "technician", "维修人员", "", "IT"),
-    ("admin", "校园管理员", "admin", "校园管理人员", "", ""),
+    ("student", "Demo Student", "user", "Student", "D1-201", ""),
+    ("teacher", "Demo Faculty", "user", "Faculty", "", ""),
+    ("tech", "Electrical Technician", "technician", "Technician", "", "Electrical"),
+    ("plumber", "Plumbing Technician", "technician", "Technician", "", "Plumbing"),
+    ("it", "IT Technician", "technician", "Technician", "", "IT"),
+    ("admin", "Campus Administrator", "admin", "Administrator", "", ""),
 ]
 
 # Match the original demo labels exactly, without keeping personal names in the
@@ -31,8 +31,8 @@ def fill_demo_student(c):
         c.execute(
             "UPDATE users SET student_no=COALESCE(NULLIF(student_no,''),?),"
             " class_name=COALESCE(NULLIF(class_name,''),?), department=COALESCE(NULLIF(department,''),?)"
-            " WHERE id='student' AND role='user' AND identity='学生'",
-            (number, "CSIT883 演示班", "计算机学院"),
+            " WHERE id='student' AND role='user' AND identity='Student'",
+            (number, "CSIT883 Demo Class", "School of Computing"),
         )
 
 

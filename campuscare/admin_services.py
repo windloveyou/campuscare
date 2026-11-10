@@ -11,13 +11,13 @@ from datetime import datetime, timezone
 import accounts
 
 PREFIX = "/api/admin-services"
-TYPES = {"transcript": "成绩单", "enrollment": "在校证明"}
+TYPES = {"transcript": "Transcript", "enrollment": "Proof of Enrollment"}
 STATUSES = {
-    "pending": "待审批",
-    "needs_materials": "待补交材料",
-    "approved": "已通过",
-    "rejected": "未通过",
-    "cancelled": "已取消",
+    "pending": "Pending Review",
+    "needs_materials": "Awaiting Documents",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "cancelled": "Canceled",
 }
 OPEN_STATUSES = ("pending", "needs_materials")
 PROFILE_FIELDS = ("name", "student_no", "class_name", "department", "email")
@@ -89,9 +89,9 @@ def matches(path):
 def access(user, Error):
     if user["role"] == "admin":
         return "reviewer"
-    if user["role"] == "user" and user["identity"] == "学生":
+    if user["role"] == "user" and user["identity"] == "Student":
         return "student"
-    raise Error("行政服务仅面向学生和管理人员", 403)
+    raise Error("Administrative Services is available to students and administrators.", 403)
 
 
 def profile_for(user):
@@ -100,20 +100,20 @@ def profile_for(user):
 
 def submitted_profile(user, edits, Error):
     if not isinstance(edits, dict) or edits.keys() - set(PROFILE_FIELDS):
-        raise Error("申请资料格式无效")
+        raise Error("Invalid application details.")
     values = {**profile_for(user), **edits}
-    name = text_field(values["name"], 50, "姓名", Error, required=True)
+    name = text_field(values["name"], 50, "name", Error, required=True)
     if len(name) < 2:
-        raise Error("姓名需 2–50 个字符")
-    number = text_field(values["student_no"], 30, "学号", Error, required=True)
+        raise Error("The name must be 2–50 characters.")
+    number = text_field(values["student_no"], 30, "student ID", Error, required=True)
     if not re.fullmatch(r"[A-Za-z0-9-]{3,30}", number):
-        raise Error("学号需 3–30 位字母、数字或连字符")
-    email = text_field(values["email"], 254, "邮箱", Error)
+        raise Error("The student ID must contain 3–30 letters, numbers, or hyphens.")
+    email = text_field(values["email"], 254, "email", Error)
     return {
         "name": name,
         "student_no": number.upper(),
-        "class_name": text_field(values["class_name"], 80, "班级", Error),
-        "department": text_field(values["department"], 80, "院系", Error),
+        "class_name": text_field(values["class_name"], 80, "class", Error),
+        "department": text_field(values["department"], 80, "department", Error),
         "email": accounts.email_address(email, Error) if email else "",
     }
 
@@ -128,7 +128,7 @@ def get_application(c, user, mode, app_id, Error):
         (app_id,),
     ).fetchone()
     if row is None or (mode == "student" and row["applicant_id"] != user["id"]):
-        raise Error("申请不存在或无权查看", 404)
+        raise Error("The application was not found or you do not have access.", 404)
     return row
 
 
@@ -172,13 +172,13 @@ def listing(c, user, mode, query, Error):
     raw_page = query.get("page", ["1"])[0]
     owner = query.get("owner", [""])[0]
     if owner and mode != "reviewer":
-        raise Error("仅管理员可按经办人筛选", 403)
+        raise Error("Only administrators can filter by reviewer.", 403)
     if owner not in ("", "mine", "unassigned"):
-        raise Error("经办人筛选条件无效")
+        raise Error("Invalid reviewer filter.")
     if (status and status not in STATUSES) or (document_type and document_type not in TYPES):
-        raise Error("查询条件无效")
+        raise Error("Invalid search criteria.")
     if not re.fullmatch(r"[1-9][0-9]{0,8}", raw_page) or not re.fullmatch(r"[A-Z0-9-]{0,24}", number):
-        raise Error("请输入有效的申请编号或页码")
+        raise Error("Enter a valid application reference or page number.")
     page = int(raw_page)
     filters, values = visible_scope(user, mode)
     if status == "cancelled":
@@ -244,7 +244,7 @@ def read(c, user, path, query, Error):
         return summary(c, user, mode)
     match = re.fullmatch(PREFIX + r"/applications/([^/]+)(?:/materials/([^/]+))?", path)
     if not match:
-        raise Error("接口不存在", 404)
+        raise Error("Endpoint not found.", 404)
     app_id, file_id = match.groups()
     c.execute("BEGIN")
     row = get_application(c, user, mode, app_id, Error)
@@ -254,7 +254,7 @@ def read(c, user, path, query, Error):
             (file_id, app_id),
         ).fetchone()
         if material is None:
-            raise Error("材料不存在", 404)
+            raise Error("Attachment not found.", 404)
         return Download(material["filename"], material["data"])
     event_columns = "id,action,note,created" + (",actor_id" if mode == "reviewer" else "")
     student_filter = " AND action NOT IN (?,?,?)" if mode == "student" else ""
@@ -291,40 +291,40 @@ def read(c, user, path, query, Error):
 
 def text_field(value, limit, label, Error, required=False):
     if not isinstance(value, str) or re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff]", value):
-        raise Error(f"{label}格式无效")
+        raise Error(f"Invalid {label}.")
     value = value.strip()
     if len(value) > limit or (required and not value):
-        raise Error(f"请填写{label}（最多 {limit} 字）" if required else f"{label}最多 {limit} 字")
+        raise Error(f"Enter {label} (up to {limit} characters)." if required else f"{label} must be no more than {limit} characters.")
     return value
 
 
 def validate_materials(files, Error, required=False):
     if not isinstance(files, list) or len(files) > MAX_FILES:
-        raise Error(f"每次最多上传 {MAX_FILES} 份材料")
+        raise Error(f"Upload up to {MAX_FILES} attachments at a time.")
     if required and not files:
-        raise Error("请至少上传一份补交材料")
+        raise Error("Upload at least one additional document.")
     materials = []
     for file in files:
         if not isinstance(file, dict):
-            raise Error("材料格式无效")
+            raise Error("Invalid attachment format.")
         filename, encoded = file.get("filename"), file.get("data")
         if not isinstance(filename, str) or not re.fullmatch(r"[^/\\<>:\"|?*\x00-\x1f\x7f\ud800-\udfff]{1,120}", filename):
-            raise Error("材料文件名无效或超过 120 个字符")
+            raise Error("The attachment filename is invalid or exceeds 120 characters.")
         kind = FILE_TYPES.get(filename.rpartition(".")[2].lower())
         if kind is None:
-            raise Error("材料仅支持 PDF、PNG、JPG")
+            raise Error("Attachments must be PDF, PNG, or JPG.")
         if not isinstance(encoded, str):
-            raise Error("材料内容无效")
+            raise Error("The attachment could not be read.")
         if len(encoded) > 4 * ((MAX_FILE_BYTES + 2) // 3):
-            raise Error("每份材料不能超过 2 MB", 413)
+            raise Error("Each attachment must be 2 MB or smaller.", 413)
         try:
             data = base64.b64decode(encoded, validate=True)
         except (ValueError, binascii.Error):
-            raise Error("材料内容无效") from None
+            raise Error("The attachment could not be read.") from None
         if len(data) > MAX_FILE_BYTES:
-            raise Error("每份材料不能超过 2 MB", 413)
+            raise Error("Each attachment must be 2 MB or smaller.", 413)
         if len(data) <= len(kind[1]) or not data.startswith(kind[1]):
-            raise Error("材料内容与扩展名不符或文件为空")
+            raise Error("The file is empty or does not match its extension.")
         materials.append((filename, data))
     return materials
 
@@ -342,30 +342,30 @@ def record(c, app_id, actor_id, action, note, stamp, materials=()):
 
 def change_assignment(c, row, user, body, stamp, Error):
     if row["effective_status"] not in OPEN_STATUSES:
-        raise Error("已结束的申请不能变更经办人", 409)
+        raise Error("A closed application cannot be reassigned.", 409)
     reviewer = active_reviewer(c, row["reviewer_id"])
     operation = body.get("operation")
-    note = text_field(body.get("note", ""), 300, "交接说明", Error)
+    note = text_field(body.get("note", ""), 300, "handoff note", Error)
     if operation == "claim":
         if reviewer:
-            raise Error("这条申请已有经办人，请刷新详情", 409)
+            raise Error("This application already has a reviewer. Refresh its details.", 409)
         target_id, event = user["id"], "claimed"
-        description = "原经办人已不可办理，已重新领取。" if row["reviewer_id"] else "已领取申请。"
+        description = "Application reclaimed because the previous reviewer is unavailable." if row["reviewer_id"] else "Application claimed."
     elif operation in ("release", "transfer"):
         if not reviewer or reviewer["id"] != user["id"]:
-            raise Error("仅当前经办人可以转交或交回申请", 403)
+            raise Error("Only the current reviewer can reassign or return this application.", 403)
         if operation == "release":
-            target_id, event, description = None, "released", "已交回待领取队列。"
+            target_id, event, description = None, "released", "Application returned to the unassigned queue."
         else:
             target = body.get("reviewer_id")
             if not isinstance(target, str) or target == user["id"] or not re.fullmatch(r"[a-z][a-z0-9_]{3,31}", target):
-                raise Error("请选择其他启用的管理员")
+                raise Error("Select another active administrator.")
             person = active_reviewer(c, target)
             if not person:
-                raise Error("目标管理员已不可办理，请刷新后重新选择", 409)
-            target_id, event, description = person["id"], "transferred", f"已转交给 {person['name']}（{person['id']}）。"
+                raise Error("That administrator is no longer available. Refresh and select another.", 409)
+            target_id, event, description = person["id"], "transferred", f"Reassigned to {person['name']} ({person['id']})."
     else:
-        raise Error("经办操作无效")
+        raise Error("Invalid reviewer assignment action.")
     c.execute(
         "UPDATE admin_service_applications SET reviewer_id=?,version=version+1,updated=? WHERE id=?",
         (target_id, stamp, row["id"]),
@@ -380,12 +380,12 @@ def write(c, user, path, body, Error):
     stamp = timestamp()
     if path == PREFIX + "/applications":
         if mode != "student":
-            raise Error("仅学生可提交申请", 403)
+            raise Error("Only students can submit applications.", 403)
         profile = submitted_profile(user, body.get("profile", {}), Error)
         document_type = body.get("document_type")
         if not isinstance(document_type, str) or document_type not in TYPES:
-            raise Error("请选择有效的申请类型")
-        purpose = text_field(body.get("purpose", ""), 300, "申请用途", Error, required=True)
+            raise Error("Select a valid document type.")
+        purpose = text_field(body.get("purpose", ""), 300, "purpose", Error, required=True)
         materials = validate_materials(body.get("materials", []), Error)
         app_id = "AS-" + secrets.token_hex(8).upper()
         c.execute(
@@ -399,22 +399,22 @@ def write(c, user, path, body, Error):
 
     match = re.fullmatch(PREFIX + r"/applications/([^/]+)/(decision|materials|assignment|cancel)", path)
     if not match:
-        raise Error("接口不存在", 404)
+        raise Error("Endpoint not found.", 404)
     app_id, action = match.groups()
     if action in ("decision", "assignment") and mode != "reviewer":
-        raise Error("仅管理员可办理审批或分配经办人", 403)
+        raise Error("Only administrators can review applications or assign reviewers.", 403)
     if action == "materials" and mode != "student":
-        raise Error("仅申请学生可补交材料", 403)
+        raise Error("Only the applicant can upload additional documents.", 403)
     if action == "cancel" and mode != "student":
-        raise Error("仅申请学生可取消申请", 403)
+        raise Error("Only the applicant can cancel the application.", 403)
     row = get_application(c, user, mode, app_id, Error)
     if type(body.get("version")) is not int or body["version"] != row["version"]:
-        raise Error("申请已更新，请刷新详情后再操作", 409)
+        raise Error("The application has changed. Refresh its details and try again.", 409)
     if action == "assignment":
         return change_assignment(c, row, user, body, stamp, Error)
     if action == "cancel":
         if row["effective_status"] not in OPEN_STATUSES:
-            raise Error("只有待审批或待补交材料的申请可以取消", 409)
+            raise Error("Only applications pending review or awaiting documents can be canceled.", 409)
         c.execute(
             "UPDATE admin_service_applications SET cancelled_at=?,updated=?,version=version+1 WHERE id=?",
             (stamp, stamp, app_id),
@@ -424,20 +424,20 @@ def write(c, user, path, body, Error):
     reviewer_id = row["reviewer_id"]
     if action == "decision":
         if row["effective_status"] != "pending":
-            raise Error("只有待审批申请可以审批", 409)
+            raise Error("Only applications pending review can be decided.", 409)
         reviewer = active_reviewer(c, reviewer_id)
         if reviewer and reviewer["id"] != user["id"]:
-            raise Error("此申请由其他管理员经办，请联系当前经办人转交", 403)
+            raise Error("This application is assigned to another administrator. Ask them to reassign it.", 403)
         reviewer_id = user["id"]
         status = body.get("decision")
         if status not in ("approved", "rejected", "needs_materials"):
-            raise Error("请选择有效的审批结果")
-        note = text_field(body.get("note", ""), 500, "审批说明", Error, required=status != "approved")
+            raise Error("Select a valid review decision.")
+        note = text_field(body.get("note", ""), 500, "reviewer comments", Error, required=status != "approved")
         event, materials = status, []
     else:
         if row["effective_status"] != "needs_materials":
-            raise Error("只有待补交材料的申请可以补交", 409)
-        note = text_field(body.get("note", ""), 500, "补充说明", Error)
+            raise Error("Additional documents can only be submitted when requested.", 409)
+        note = text_field(body.get("note", ""), 500, "additional notes", Error)
         materials = validate_materials(body.get("materials", []), Error, required=True)
         event, status = "supplemented", "pending"
     c.execute(

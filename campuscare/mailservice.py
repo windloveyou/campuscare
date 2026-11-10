@@ -10,8 +10,8 @@ from pathlib import Path
 from threading import RLock
 
 PROVIDERS = {
-    'qq': {'name': 'QQ 邮箱', 'host': 'smtp.qq.com', 'domains': ['qq.com', 'foxmail.com']},
-    '163': {'name': '163 邮箱', 'host': 'smtp.163.com', 'domains': ['163.com']},
+    'qq': {'name': 'QQ Mail', 'host': 'smtp.qq.com', 'domains': ['qq.com', 'foxmail.com']},
+    '163': {'name': '163 Mail', 'host': 'smtp.163.com', 'domains': ['163.com']},
     'gmail': {'name': 'Gmail', 'host': 'smtp.gmail.com', 'domains': ['gmail.com', 'googlemail.com']},
 }
 LOCK = RLock()
@@ -60,13 +60,13 @@ def save(body, email_address, Error):
         else:
             provider = body.get('provider')
             if not isinstance(provider, str) or provider not in PROVIDERS:
-                raise Error('请选择 QQ、163 或 Gmail 发件邮箱')
+                raise Error('Select a QQ, 163, or Gmail sender account.')
             sender = email_address(body.get('sender'), Error)
             if sender.rsplit('@', 1)[-1] not in PROVIDERS[provider]['domains']:
-                raise Error('发件邮箱与选择的服务商不一致')
+                raise Error('The sender address does not match the selected provider.')
             secret = body.get('password', '')
             if not isinstance(secret, str):
-                raise Error('请填写邮箱授权码或应用专用密码')
+                raise Error('Enter an authorization code or app password.')
             secret = secret.strip()
             if provider == 'gmail':
                 secret = secret.replace(' ', '')
@@ -74,7 +74,7 @@ def save(body, email_address, Error):
             if not secret and previous.get('provider') == provider and previous.get('sender') == sender:
                 secret = previous.get('password', '')
             if not secret or len(secret) > 256 or any(not 33 <= ord(c) <= 126 for c in secret):
-                raise Error('请填写有效的授权码；更换发件邮箱时需重新填写')
+                raise Error('Enter a valid credential. A new sender address requires a new credential.')
             value = {'mode': 'smtp', 'provider': provider, 'sender': sender,
                      'username': sender, 'password': secret,
                      'host': PROVIDERS[provider]['host'], 'port': 465, 'tls': 'ssl'}
@@ -90,7 +90,7 @@ def save(body, email_address, Error):
                 os.fsync(stream.fileno())
             os.replace(temporary, path)
         except OSError:
-            raise Error('无法保存邮件配置，请检查服务端数据目录权限', 503)
+            raise Error('Could not save email settings. Check access to the server data directory.', 503)
         finally:
             if temporary and os.path.exists(temporary):
                 os.unlink(temporary)
@@ -127,18 +127,18 @@ def send(recipient, subject, text):
 
 def test_delivery(recipient, Error):
     try:
-        send(recipient, 'CampusCare 邮件服务测试',
-             '这是一封由校园管理人员主动发送的测试邮件。\n收到此邮件说明该收件邮箱能够接收本系统邮件。\n注册和找回密码时，请在对应页面点击“获取验证码”。\n此邮件不含验证码，无需回复。')
+        send(recipient, 'SmartCampus Email Delivery Test',
+             'A campus administrator sent this test email.\nIf you received it, this inbox can receive SmartCampus email.\nSelect Send Code on the registration or password reset page to request a verification code.\nThis message does not contain a verification code. No reply is needed.')
     except smtplib.SMTPAuthenticationError:
-        raise Error('邮箱认证失败：请开启 SMTP 服务，并使用授权码/应用专用密码，不能填写邮箱登录密码。', 503)
+        raise Error('Email authentication failed. Enable SMTP and use an authorization code or app password.', 503)
     except smtplib.SMTPRecipientsRefused:
-        raise Error('收件邮箱被邮件服务拒绝，请检查地址及收件限制。', 503)
+        raise Error('The provider rejected the recipient address. Check the address and delivery restrictions.', 503)
     except (smtplib.SMTPSenderRefused, smtplib.SMTPDataError):
-        raise Error('邮件服务拒绝发信：请检查发件账号状态、发送额度或邮箱风控提示。', 503)
+        raise Error('The provider rejected the message. Check the sender account, sending limits, and provider notices.', 503)
     except ssl.SSLError:
-        raise Error('邮件服务器加密连接失败，请检查系统时间和网络证书。', 503)
+        raise Error('Could not establish an encrypted email connection. Check the system clock and network certificates.', 503)
     except (OSError, smtplib.SMTPException):
-        raise Error('无法连接邮件服务或连接中断，请检查网络和 SMTP 服务；Gmail 需要当前网络能访问 Google。', 503)
+        raise Error('The email connection failed. Check the network and SMTP settings. Gmail requires access to Google.', 503)
     except (ValueError, KeyError):
-        raise Error('邮件配置不完整，请先保存发件邮箱和授权码。', 503)
-    return {'ok': True, 'message': '邮件服务器已接受测试邮件。请到收件箱或垃圾邮件中确认；服务器接受不代表已送达。'}
+        raise Error('Save the sender address and credential first.', 503)
+    return {'ok': True, 'message': 'The server accepted the test message but has not confirmed delivery. Check your inbox and spam folder.'}

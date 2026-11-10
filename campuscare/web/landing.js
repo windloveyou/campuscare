@@ -2,23 +2,23 @@
 // Adapted from Little Wonders by uiuxlabz. Source and license: docs/PORTAL.md.
 const publicLanding = (function () {
     const bannerPhotos = [
-        ['gcu-quadrangle.webp', '暖色教学楼环绕绿地，学生沿庭院步行'],
-        ['gcu-library-terrace.webp', '学生穿过图书馆露台前的绿植庭院'],
-        ['gcu-campus-garden.webp', '树荫、草丛和木桥环绕校园花园'],
+        ['gcu-quadrangle.webp', 'Students walking across a landscaped academic courtyard'],
+        ['gcu-library-terrace.webp', 'Students crossing the garden outside the library terrace'],
+        ['gcu-campus-garden.webp', 'A wooden footbridge in a shaded campus garden'],
     ];
-    const [overviewFile, overviewDescription] = ['gcu-learning-commons.webp', '来自不同背景的学生在明亮的学习空间共同讨论'];
+    const [overviewFile, overviewDescription] = ['gcu-learning-commons.webp', 'Students collaborating in a light-filled learning commons'];
     const galleryPhotos = [
-        ['gcu-campus-walk.webp', '校园步道', '学生沿林荫步道穿行于教学楼之间'],
-        ['gcu-gallery-studio.webp', '设计工作室', '学生在设计工作室的长桌旁制作建筑模型'],
-        ['gcu-gallery-atrium.webp', '教学楼中庭', '天窗下的中庭设有多层木质楼梯与绿植'],
+        ['gcu-campus-walk.webp', 'Campus Walkway', 'Students walking along a tree-lined path between academic buildings'],
+        ['gcu-gallery-studio.webp', 'Design Studio', 'Students building architectural models in a design studio'],
+        ['gcu-gallery-atrium.webp', 'Academic Atrium', 'A skylit atrium with timber stairs and indoor plants'],
     ];
-    const categories = [['all', '全部服务'], ['documents', '行政服务'], ['campus', '设施与资源'], ['staff', '人员工作区']];
+    const categories = [['all', 'All Services'], ['documents', 'Administrative Services'], ['campus', 'Facilities and Resources'], ['staff', 'Staff Workspaces']];
     const servicePhotos = {
         transcript: 'gcu-service-transcript.webp', enrollment: 'gcu-service-enrollment.webp',
         report: 'gcu-service-repair.webp', map: 'gcu-service-map.webp',
         review: 'gcu-service-review.webp', maintenance: 'gcu-service-maintenance.webp',
     };
-    const serviceAudiences = {transcript: '学生', enrollment: '学生', report: '学生 / 教师', map: '校内用户', review: '管理人员', maintenance: '维修人员'};
+    const serviceAudiences = {transcript: 'Student', enrollment: 'Student', report: 'Students and Faculty', map: 'Campus Members', review: 'Administrators', maintenance: 'Technicians'};
     const counter = index => String(index + 1).padStart(2, '0');
     let dispose = () => {};
 
@@ -50,11 +50,11 @@ const publicLanding = (function () {
             const file = servicePhotos[item.key];
             return `<article class="class-card" data-service-group="${item.group}">
                 <div class="class-img-wrap" data-parallax="13"><img src="/${file}" alt="" class="class-img" loading="lazy">
-                    <span class="class-tag">${item.group === 'staff' ? '人员工作区' : item.tag}</span><span class="class-index" aria-hidden="true">${counter(index)}</span></div>
+                    <span class="class-tag">${item.group === 'staff' ? 'Staff Workspaces' : item.tag}</span><span class="class-index" aria-hidden="true">${counter(index)}</span></div>
                 <div class="class-body"><div class="class-title-row"><span class="class-symbol">${welcomeIcon(item.key)}</span><h3 class="class-name">${item.title}</h3></div>
                     <p class="class-desc">${item.desc}</p>
                     <div class="class-actions"><span class="class-audience">${icon('users')} ${serviceAudiences[item.key]}</span>
-                        <button type="button" class="btn btn-primary btn-sm" data-public-service="${item.key}">办理入口 ${icon('arrow')}</button></div></div>
+                        <button type="button" class="btn btn-primary btn-sm" data-public-service="${item.key}">Open Service ${icon('arrow')}</button></div></div>
             </article>`;
         }).join('');
     }
@@ -73,31 +73,31 @@ const publicLanding = (function () {
     // → about split → class grid → gallery. Business actions are ours.
     function render() {
         return `<div class="public-site" id="top">
-            <a class="skip-link" href="#main">跳到主要内容</a>
+            <a class="skip-link" href="#main">Skip to main content</a>
             <div class="topbar"><div class="container topbar-inner">
-                <p class="topbar-item"><span class="topbar-icon">${icon('map')}</span> GlobalConnect University · 示例校区</p>
-                <p class="topbar-item topbar-mid">SmartCampus 校园服务门户</p>
-                <p class="topbar-item topbar-end"><a href="#campus-gallery">GCU 校园图景</a></p>
+                <p class="topbar-item"><span class="topbar-icon">${icon('map')}</span> GlobalConnect University · Demo Campus</p>
+                <p class="topbar-item topbar-mid">SmartCampus Student and Staff Portal</p>
+                <p class="topbar-item topbar-end"><a href="#campus-gallery">GCU Campus Gallery</a></p>
             </div></div>
             <header class="site-header"><div class="container nav-wrap">
-                <a href="#top" class="brand" aria-label="CampusCare 首页"><span class="brand-mark" aria-hidden="true"></span>
-                    <span class="brand-text">Campus<span>Care</span></span></a>
-                <button type="button" class="nav-toggle" aria-label="打开菜单" aria-expanded="false" aria-controls="site-nav">☰</button>
-                <nav class="nav-links" id="site-nav" aria-label="网站导航">
-                    <a href="#top" class="nav-link active" aria-current="location">首页</a>
-                    <a href="#using-campuscare" class="nav-link">关于门户</a>
-                    <a href="#service-catalog" class="nav-link">服务目录</a>
-                    <a href="#campus-gallery" class="nav-link">校园图景</a>
-                    <a class="nav-cta" href="#login">校园账号登录 ${icon('arrow')}</a>
+                <a href="#top" class="brand" aria-label="SmartCampus Home"><span class="brand-mark" aria-hidden="true"></span>
+                    <span class="brand-text">Smart<span>Campus</span></span></a>
+                <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="site-nav">☰</button>
+                <nav class="nav-links" id="site-nav" aria-label="Main navigation">
+                    <a href="#top" class="nav-link active" aria-current="location">Home</a>
+                    <a href="#using-campuscare" class="nav-link">About</a>
+                    <a href="#service-catalog" class="nav-link">Service Directory</a>
+                    <a href="#campus-gallery" class="nav-link">Campus Gallery</a>
+                    <a class="nav-cta" href="#login">Campus Sign In ${icon('arrow')}</a>
                 </nav>
             </div><span class="scroll-meter" aria-hidden="true"></span></header>
             <main id="main" tabindex="-1">
-                <h1 class="sr-only">校园服务</h1>
-                <section class="hero" id="hero" aria-label="校园照片轮播">
+                <h1 class="sr-only">Campus Services</h1>
+                <section class="hero" id="hero" aria-label="Campus photo slideshow">
                     <div class="hero-bg" data-parallax="32">${bannerPhotos.map(([file, description], i) => `<img src="/${file}" alt="${description}"
                         class="campus-photo ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}" ${i === 0 ? 'fetchpriority="high"' : 'decoding="async"'}>`).join('')}</div>
                 </section>
-                <section class="section ribbon-section" aria-label="快捷服务"><div class="container">
+                <section class="section ribbon-section" aria-label="Quick services"><div class="container">
                     <div class="ribbon">${workspace.catalog.map(item => `<button type="button" class="ribbon-item" data-public-service="${item.key}">
                         <span class="ribbon-icon">${welcomeIcon(item.key)}</span><span class="ribbon-label">${item.title}</span></button>`).join('')}</div>
                 </div></section>
@@ -106,27 +106,27 @@ const publicLanding = (function () {
                         <div class="split-photo-frame" data-parallax="24"><img src="/${overviewFile}" alt="${overviewDescription}" class="split-photo" loading="lazy"></div>
                     </div><div class="split-copy">
                         ${sectionMarker('overview')}
-                        <h2 class="section-title">校园服务<em>概览</em></h2>
-                        <p>GlobalConnect University（GCU）</p>
-                        <ul class="check-list"><li>行政服务：成绩单申请、在校证明申请、申请进度查询</li>
-                            <li>设施与资源管理：校园地图、设施查询、在线报修</li>
-                            <li>运营管理：行政审批、工单派发、设施巡检</li></ul>
-                        <div class="split-footer"><a href="#campus-gallery" class="btn btn-ghost-dark">浏览校园图景 ${icon('arrow')}</a>${campusDoodle}</div>
+                        <h2 class="section-title">Campus Services <em>Overview</em></h2>
+                        <p>GlobalConnect University (GCU)</p>
+                        <ul class="check-list"><li>Administrative Services: transcripts, proof of enrollment, and application tracking</li>
+                            <li>Facilities and Resources: campus maps, facilities, and maintenance requests</li>
+                            <li>Campus Operations: application review, work orders, and inspections</li></ul>
+                        <div class="split-footer"><a href="#campus-gallery" class="btn btn-ghost-dark">Browse Campus Gallery ${icon('arrow')}</a>${campusDoodle}</div>
                     </div></div>
                 </div></section>
                 <section class="section service-directory" id="service-catalog" aria-labelledby="catalog-heading">
                     <div class="container"><div class="section-head">${sectionMarker('catalog')}
-                        <h2 class="section-title" id="catalog-heading">校园<em>服务目录</em></h2></div>
-                        <div class="directory-tabs" role="group" aria-label="服务分类">${categories.map(([key, label]) =>
+                        <h2 class="section-title" id="catalog-heading">Campus <em>Service Directory</em></h2></div>
+                        <div class="directory-tabs" role="group" aria-label="Service categories">${categories.map(([key, label]) =>
             `<button type="button" data-public-filter="${key}" aria-pressed="${key === 'all'}">${label}</button>`).join('')}</div>
                         <div class="class-grid" id="public-services" aria-live="polite">${cards()}</div>
                     </div></section>
                 <section class="section section-cream" id="campus-gallery"><div class="container">
-                    <div class="section-head">${sectionMarker('gallery')}<h2 class="section-title">GCU <em>校园图景</em></h2>
-                        <p>为本项目生成的校园概念图。点击图片可放大并切换场景。</p>
-                        <button type="button" class="linkbtn gallery-play" aria-controls="hero">暂停首页轮播</button></div>
+                    <div class="section-head">${sectionMarker('gallery')}<h2 class="section-title">GCU <em>Campus Gallery</em></h2>
+                        <p>Concept images of the fictional campus. Select a photo to enlarge it.</p>
+                        <button type="button" class="linkbtn gallery-play" aria-controls="hero">Pause homepage slideshow</button></div>
                     <div class="gallery-grid">${galleryPhotos.map(([file, title, description], index) => `<figure class="campus-gallery-card">
-                        <a href="/${file}" class="gallery-item" target="_blank" rel="noopener" data-campus-viewer="${index}" data-parallax="17" aria-label="查看${title}大图">
+                        <a href="/${file}" class="gallery-item" target="_blank" rel="noopener" data-campus-viewer="${index}" data-parallax="17" aria-label="View full-size photo: ${title}">
                         <img src="/${file}" alt="${description}" loading="lazy"></a>
                         <figcaption><span aria-hidden="true">${counter(index)}</span>${title}</figcaption></figure>`).join('')}</div>
                 </div></section>
@@ -139,13 +139,13 @@ const publicLanding = (function () {
         viewer.className = 'campus-viewer';
         viewer.setAttribute('aria-labelledby', 'campus-viewer-title');
         viewer.innerHTML = `<div class="viewer-bar">
-            <div><p class="viewer-kicker">GCU 校园图景</p><h2 id="campus-viewer-title"></h2></div>
-            <button type="button" class="viewer-icon viewer-close" aria-label="关闭大图">×</button>
+            <div><p class="viewer-kicker">GCU Campus Gallery</p><h2 id="campus-viewer-title"></h2></div>
+            <button type="button" class="viewer-icon viewer-close" aria-label="Close photo">×</button>
         </div>
         <div class="viewer-stage"></div>
         <div class="viewer-bar viewer-footer"><p class="viewer-count" aria-live="polite"></p>
-            <div class="viewer-actions"><button type="button" class="viewer-icon viewer-prev" aria-label="大图上一张">‹</button>
-                <button type="button" class="viewer-icon viewer-next" aria-label="大图下一张">›</button></div>
+            <div class="viewer-actions"><button type="button" class="viewer-icon viewer-prev" aria-label="Previous photo">‹</button>
+                <button type="button" class="viewer-icon viewer-next" aria-label="Next photo">›</button></div>
         </div>`;
         let index = selected;
         const show = step => {
@@ -204,7 +204,7 @@ const publicLanding = (function () {
             playing = active;
             root.classList.toggle('gallery-playing', active);
             clearInterval(timer);
-            pause.textContent = playing ? '暂停首页轮播' : '播放首页轮播';
+            pause.textContent = playing ? 'Pause homepage slideshow' : 'Play homepage slideshow';
             if (playing) timer = setInterval(() => {
                 if (root.isConnected && !document.hidden && !root.querySelector('.campus-viewer[open]')) show(current + 1);
             }, 5500);
@@ -223,7 +223,7 @@ const publicLanding = (function () {
             links.classList.toggle('open', open);
             toggle.classList.toggle('open', open);
             toggle.setAttribute('aria-expanded', open);
-            toggle.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
+            toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
         }
         toggle.addEventListener('click', () => setMenu(!links.classList.contains('open')), opts);
         document.addEventListener('click', e => {

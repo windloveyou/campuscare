@@ -145,11 +145,11 @@ class MailTests(unittest.TestCase):
 
     def test_error_diagnostics_do_not_leak_credentials(self):
         self.save()
-        cases = [(smtplib.SMTPAuthenticationError(535, b'test-app-password'), '认证失败'),
-                 (smtplib.SMTPRecipientsRefused({'a@qq.com': (550, 'test-app-password')}), '收件邮箱'),
-                 (smtplib.SMTPDataError(554, b'test-app-password'), '拒绝发信'),
-                 (TimeoutError('test-app-password'), '无法连接'),
-                 (ssl.SSLError('test-app-password'), '加密连接')]
+        cases = [(smtplib.SMTPAuthenticationError(535, b'test-app-password'), 'authentication failed'),
+                 (smtplib.SMTPRecipientsRefused({'a@qq.com': (550, 'test-app-password')}), 'rejected the recipient'),
+                 (smtplib.SMTPDataError(554, b'test-app-password'), 'rejected the message'),
+                 (TimeoutError('test-app-password'), 'connection failed'),
+                 (ssl.SSLError('test-app-password'), 'encrypted email connection')]
         for error, expected in cases:
             self.connection.login.side_effect = error
             status, response = self.client.call('/mail/test', {'recipient': 'a@qq.com'})
@@ -162,7 +162,7 @@ class MailTests(unittest.TestCase):
         for _ in range(5):
             status, response = self.client.call('/mail/test', {'recipient': 'a@gmail.com'})
             self.assertEqual(status, 200, response)
-            self.assertIn('不代表已送达', response['message'])
+            self.assertIn('has not confirmed delivery', response['message'])
         self.assertEqual(self.client.call('/mail/test', {'recipient': 'a@gmail.com'})[0], 429)
         self.assertEqual(self.connection.send_message.call_count, 5)
 

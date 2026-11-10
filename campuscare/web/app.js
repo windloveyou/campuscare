@@ -15,7 +15,7 @@ async function api(path, body) {
             clearSession();
             renderPublic(true);
         }
-        throw new Error(data.error || '请求失败');
+        throw new Error(data.error || 'The request could not be completed.');
     }
     return data;
 }
@@ -117,7 +117,7 @@ function renderPublic(focus = false) {
     }
     if (!context) {
         if ($('.public-site')) return;
-        document.title = 'CampusCare · 校园服务门户';
+        document.title = 'SmartCampus · Campus Services Portal';
         $('#app').innerHTML = publicLanding.render();
         publicLanding.bind();
         portalMotion.watchPublic($('.public-site'));
@@ -130,7 +130,7 @@ function renderPublic(focus = false) {
     portalMotion.leavePublic();
     if (context.kind === 'login') renderLoginForm(context);
     else renderAuth(context.kind, context);
-    document.title = `${$('#account-heading').textContent} · CampusCare`;
+    document.title = `${$('#account-heading').textContent} · SmartCampus`;
     window.scrollTo(0, 0);
     if (focus) $('#account-heading').focus({preventScroll: true});
 }
@@ -141,7 +141,7 @@ function renderLoginForm(context) {
         const password = $('#password');
         const reveal = password.type === 'password';
         password.type = reveal ? 'text' : 'password';
-        event.currentTarget.textContent = reveal ? '隐藏' : '显示';
+        event.currentTarget.textContent = reveal ? 'Hide' : 'Show';
         event.currentTarget.setAttribute('aria-pressed', reveal);
     };
     const form = $('#login-form');
@@ -169,11 +169,11 @@ function renderLoginForm(context) {
 
 function openProfile() {
     const user = state.user;
-    drawer(`<div class="drawer-head"><h2>个人资料</h2><button class="close" data-action="close" aria-label="关闭">×</button></div>
-        <div class="detail-box"><p>姓名：${esc(user.name)}</p><p>账号：${esc(user.id)}</p><p>身份：${esc(user.identity)}</p>
-        <p>班级：${esc(user.class_name || '未填写')}</p><p>学号 / 工号：${esc(user.student_no || '未填写')}</p>
-        <p>学院 / 院系：${esc(user.department || '未填写')}</p><p>邮箱：${esc(user.email || '演示账号未绑定邮箱')}</p>
-        <p class="subtitle">${user.email_verified ? '邮箱已验证，可用于找回密码。' : '尚未绑定验证邮箱，无法使用邮箱找回密码。'}</p></div>`);
+    drawer(`<div class="drawer-head"><h2>Profile</h2><button class="close" data-action="close" aria-label="Close">×</button></div>
+        <div class="detail-box"><p>Full Name: ${esc(user.name)}</p><p>Account: ${esc(user.id)}</p><p>Campus Affiliation: ${esc(user.identity)}</p>
+        <p>Class: ${esc(user.class_name || 'Not provided')}</p><p>Student or Staff ID: ${esc(user.student_no || 'Not provided')}</p>
+        <p>School or Department: ${esc(user.department || 'Not provided')}</p><p>Email: ${esc(user.email || 'No email linked to this demo account')}</p>
+        <p class="subtitle">${user.email_verified ? 'Your verified email can be used to reset your password.' : 'Verify an email address to enable password recovery.'}</p></div>`);
 }
 
 function render() {
@@ -181,7 +181,7 @@ function render() {
     publicLanding.unbind();
     portalMotion.leavePublic();
     const user = state.user;
-    document.title = 'CampusCare · 校园服务门户';
+    document.title = 'SmartCampus · Campus Services Portal';
     if (!workspace.allowed(user, page)) page = 'overview';
     $('#app').innerHTML = workspace.shell(user, page);
     const content = $('#content');

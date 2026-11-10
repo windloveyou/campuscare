@@ -4,6 +4,7 @@ import re
 import secrets
 import sqlite3
 import accounts
+import english_data
 
 FIELDS = 'id,name,role,identity,room,skill,email,email_verified,student_no,class_name,department,enabled,version,created_at,updated_at'
 EDITABLE = ('name', 'role', 'identity', 'room', 'skill', 'student_no', 'class_name', 'department', 'enabled')
@@ -13,7 +14,7 @@ ROLES = {'user', 'technician', 'admin'}
 def require_admin(c, actor, Error):
     current = c.execute('SELECT role,enabled FROM users WHERE id=?', (actor['id'],)).fetchone()
     if not current or current['role'] != 'admin' or not current['enabled']:
-        raise Error('仅管理员可管理用户', 403)
+        raise Error('Only administrators can manage users.', 403)
 
 
 def rooms(c):
@@ -23,7 +24,7 @@ def rooms(c):
 def detail(c, uid, Error):
     row = c.execute(f'SELECT {FIELDS} FROM users WHERE id=?', (uid,)).fetchone()
     if not row:
-        raise Error('用户不存在', 404)
+        raise Error('User not found.', 404)
     return dict(row)
 
 
@@ -35,7 +36,7 @@ def listing(c, actor, query, Error):
     try:
         page = max(1, int(query.get('page', ['1'])[0]))
     except (ValueError, TypeError):
-        raise Error('页码无效')
+        raise Error('Invalid page number.')
     clauses, args = [], []
     if q:
         term = '%' + q.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_') + '%'
@@ -43,11 +44,11 @@ def listing(c, actor, query, Error):
         args.extend([term] * 5)
     if role:
         if role not in ROLES:
-            raise Error('角色筛选无效')
+            raise Error('Invalid role filter.')
         clauses.append('role=?'); args.append(role)
     if enabled:
         if enabled not in ['0', '1']:
-            raise Error('状态筛选无效')
+            raise Error('Invalid status filter.')
         clauses.append('enabled=?'); args.append(int(enabled))
     where = ' WHERE ' + ' AND '.join(clauses) if clauses else ''
     total = c.execute('SELECT count(*) FROM users' + where, args).fetchone()[0]
@@ -72,27 +73,28 @@ def normalized(c, body, old, Error):
     for key in EDITABLE:
         if key != 'enabled':
             if value[key] is None: value[key] = ''
-            if not isinstance(value[key], str): raise Error('用户资料格式不正确')
+            if not isinstance(value[key], str): raise Error('Invalid account details.')
             value[key] = value[key].strip()
-    if value['role'] not in ROLES: raise Error('请选择有效角色')
-    if value['enabled'] not in [0, 1] or not isinstance(value['enabled'], (int, bool)): raise Error('账号状态无效')
+    if value['role'] not in ROLES: raise Error('Select a valid role.')
+    if value['enabled'] not in [0, 1] or not isinstance(value['enabled'], (int, bool)): raise Error('Invalid account status.')
     value['enabled'] = int(value['enabled'])
-    if not 2 <= len(value['name']) <= 50: raise Error('姓名需2–50个字符')
+    if not 2 <= len(value['name']) <= 50: raise Error('The name must be 2–50 characters.')
     if value['role'] == 'user':
-        if value['identity'] not in ['学生', '教师']: raise Error('普通用户身份应为学生或教师')
+        value['identity'] = english_data.identity(value['identity'])
+        if value['identity'] not in ['Student', 'Faculty']: raise Error('Select Student or Faculty for a campus member.')
     else:
-        value['identity'] = '维修人员' if value['role'] == 'technician' else '校园管理人员'
+        value['identity'] = 'Technician' if value['role'] == 'technician' else 'Administrator'
     value['student_no'] = value['student_no'].upper() or None
-    if value['student_no'] and not re.fullmatch(r'[A-Z0-9-]{3,30}', value['student_no']): raise Error('学号/工号需3–30位字母、数字或连字符')
+    if value['student_no'] and not re.fullmatch(r'[A-Z0-9-]{3,30}', value['student_no']): raise Error('The student or staff ID must contain 3–30 letters, numbers, or hyphens.')
     for key in ['class_name', 'department', 'skill']:
-        if len(value[key]) > 80: raise Error('班级、院系或维修专长最多80个字符')
+        if len(value[key]) > 80: raise Error('Class, department, and specialty can contain up to 80 characters each.')
     # Preserve existing demo accounts without forcing invented enrollment details.
-    if value['role']=='user' and value['identity']=='学生' and (not old or old.get('class_name') or old.get('role')!='user' or old.get('identity')!='学生'):
-        if not value['student_no'] or not value['class_name']: raise Error('学生需填写学号和班级')
+    if value['role']=='user' and value['identity']=='Student' and (not old or old.get('class_name') or old.get('role')!='user' or old.get('identity')!='Student'):
+        if not value['student_no'] or not value['class_name']: raise Error('A student ID and class are required.')
     value['room'] = value['room'].upper()
-    if value['room'] and value['room'] not in rooms(c): raise Error('请选择台账中已有的宿舍房间')
+    if value['room'] and value['room'] not in rooms(c): raise Error('Select a residence room from the asset register.')
     if value['role'] != 'user': value['room'] = ''
-    if value['role'] == 'technician' and not value['skill']: raise Error('请填写维修专长')
+    if value['role'] == 'technician' and not value['skill']: raise Error('Enter a maintenance specialty.')
     if value['role'] != 'technician': value['skill'] = ''
     return value
 
@@ -106,26 +108,26 @@ def handle(c, actor, uid, action, body, digest, Error):
     c.execute('BEGIN IMMEDIATE')
     require_admin(c, actor, Error)
     allowed = {'username', 'password', 'note', *EDITABLE} if action == 'create' else {'version', 'password', 'note'} if action == 'password' else {'version', 'note', *EDITABLE}
-    if set(body) - allowed: raise Error('包含不支持的修改字段；邮箱验证状态不可由管理员直接修改')
+    if set(body) - allowed: raise Error('The update contains unsupported fields. Administrators cannot change email verification status.')
     note = str(body.get('note', '')).strip()
-    if len(note) > 300: raise Error('操作说明最多300字')
+    if len(note) > 300: raise Error('The reason for the change must be no more than 300 characters.')
     stamp = accounts.now().isoformat(timespec='seconds')
     if action == 'create':
         uid = str(body.get('username', '')).strip().lower()
-        if not re.fullmatch(r'[a-z][a-z0-9_]{3,31}', uid): raise Error('用户名需4–32位，以字母开头，只含字母、数字、下划线')
-        if c.execute('SELECT 1 FROM users WHERE id=?', (uid,)).fetchone(): raise Error('用户名已存在',409)
+        if not re.fullmatch(r'[a-z][a-z0-9_]{3,31}', uid): raise Error('Use 4–32 letters, numbers, or underscores, starting with a letter.')
+        if c.execute('SELECT 1 FROM users WHERE id=?', (uid,)).fetchone(): raise Error('This username is already in use.',409)
         value = normalized(c, body, {}, Error)
         secret = accounts.password(body.get('password'), Error)
         salt = secrets.token_hex(16)
         try:
             c.execute('INSERT INTO users(id,name,role,identity,room,skill,student_no,class_name,department,enabled,salt,password,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
                       (uid, *[value[k] for k in EDITABLE[:-1]], value['enabled'], salt, digest(secret,salt), stamp, stamp))
-        except sqlite3.IntegrityError: raise Error('用户名或学号/工号已存在',409)
+        except sqlite3.IntegrityError: raise Error('This username or student or staff ID is already in use.',409)
         record(c, uid, actor, 'create', {k:{'before':None,'after':v} for k,v in value.items()}, note)
     else:
         old = detail(c, uid, Error)
         if type(body.get('version')) is not int or body['version'] != old['version']:
-            raise Error('用户资料已更新，请重新打开后操作',409)
+            raise Error('The account changed. Reopen it before making further updates.',409)
         if action == 'password':
             secret = accounts.password(body.get('password'),Error)
             salt = secrets.token_hex(16)
@@ -134,20 +136,20 @@ def handle(c, actor, uid, action, body, digest, Error):
         else:
             value = normalized(c, body, old, Error)
             removing_admin = old['role']=='admin' and old['enabled'] and (value['role']!='admin' or not value['enabled'])
-            if uid==actor['id'] and (value['role']!='admin' or not value['enabled']): raise Error('不能停用自己或取消自己的管理员角色',409)
+            if uid==actor['id'] and (value['role']!='admin' or not value['enabled']): raise Error('You cannot deactivate your own account or remove your administrator role.',409)
             if removing_admin and c.execute("SELECT count(*) FROM users WHERE role='admin' AND enabled=1").fetchone()[0]<=1:
-                raise Error('系统必须保留至少一名启用的管理员',409)
+                raise Error('At least one administrator must remain active.',409)
             if old['role']=='technician' and (value['role']!='technician' or not value['enabled']):
                 if c.execute("SELECT 1 FROM tickets WHERE assignee=? AND status NOT IN ('closed','cancelled')",(uid,)).fetchone():
-                    raise Error('该维修人员还有未完成工单，请先移交任务或完成验收',409)
+                    raise Error('Reassign or complete this technician’s open work orders first.',409)
             changes = {k:{'before':old[k],'after':v} for k,v in value.items() if old[k]!=v}
-            if not changes: return {'user':old,'message':'资料未变化'}
+            if not changes: return {'user':old,'message':'No changes to save.'}
             try:
                 c.execute('UPDATE users SET '+','.join(k+'=?' for k in EDITABLE)+',version=version+1,updated_at=? WHERE id=?', (*[value[k] for k in EDITABLE],stamp,uid))
-            except sqlite3.IntegrityError: raise Error('学号/工号已被其他用户使用',409)
+            except sqlite3.IntegrityError: raise Error('This student or staff ID is already in use.',409)
             record(c,uid,actor,'update',changes,note)
         # Re-authenticate after every edit so privileges and passwords cannot remain stale.
         c.execute('DELETE FROM sessions WHERE user_id=?',(uid,))
         if old.get('email'):
             c.execute('UPDATE email_codes SET used=1 WHERE email=?',(old['email'],))
-    return {'user':detail(c,uid,Error),'message':'用户已创建' if action=='create' else '已保存，目标用户的旧登录会话已失效'}
+    return {'user':detail(c,uid,Error),'message':'User created.' if action=='create' else 'Changes saved. The user has been signed out of existing sessions.'}

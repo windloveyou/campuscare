@@ -30,28 +30,28 @@ const icons = {
 };
 const icon = name => `<span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="${icons[name]||icons.box}"/></svg></span>`;
 const labels = {
-    pending: '待确认',
-    assigned: '已派单',
-    in_progress: '维修中',
-    waiting_parts: '等待配件',
-    review: '待验收',
-    closed: '已完成',
-    cancelled: '已取消',
-    normal: '记录正常',
-    unknown: '待核实',
-    retired: '已停用'
+    pending: 'Pending Review',
+    assigned: 'Assigned',
+    in_progress: 'In Progress',
+    waiting_parts: 'Awaiting Parts',
+    review: 'Awaiting Verification',
+    closed: 'Completed',
+    cancelled: 'Canceled',
+    normal: 'No Known Issues',
+    unknown: 'Unverified',
+    retired: 'Inactive'
 };
 const badge = s => `<span class="badge ${['normal','closed'].includes(s)?'green':['pending','waiting_parts'].includes(s)?'orange':['assigned','in_progress','review'].includes(s)?'blue':''}">${labels[s]||esc(s)}</span>`;
-const pri = p => `<span class="badge ${p==='high'?'red':p==='medium'?'orange':''}">${{high:'高优先',medium:'普通',low:'低优先'}[p]||p}</span>`;
-const date = d => d ? new Date(d).toLocaleString('zh-CN', {
+const pri = p => `<span class="badge ${p==='high'?'red':p==='medium'?'orange':''}">${{high:'High',medium:'Normal',low:'Low'}[p]||p}</span>`;
+const date = d => d ? new Date(d).toLocaleString('en-US', {
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     hour12: false
-}) : '未记录';
+}) : 'Not recorded';
 function drawer(html) {
-    $('#modal-root').innerHTML = `<div class="drawer-backdrop"><section class="drawer" role="dialog" aria-modal="true" aria-label="详情">${html}</section></div>`;
+    $('#modal-root').innerHTML = `<div class="drawer-backdrop"><section class="drawer" role="dialog" aria-modal="true" aria-label="Details">${html}</section></div>`;
     document.body.style.overflow = 'hidden';
     $('.drawer .close')?.focus();
 }

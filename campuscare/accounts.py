@@ -4,6 +4,7 @@ import hmac
 import re
 import secrets
 import mailservice
+import english_data
 from datetime import datetime, timedelta, timezone
 
 
@@ -36,13 +37,13 @@ def mode():
 def options():
     mail_mode = mode()
     return {'mail_mode':mail_mode, 'code_ttl_seconds':600, 'resend_seconds':60,
-            'message': '本机演示：验证码显示在页面，不会发送邮件。' if mail_mode=='demo' else '验证码通过邮件发送，支持 Gmail、QQ、163 等邮箱；未收到时请检查垃圾邮件。' if mail_mode=='smtp' else '邮件服务尚未配置，请管理员在“邮件服务”中设置发件邮箱。'}
+            'message': 'Local demo: verification codes appear on screen. No emails are sent.' if mail_mode=='demo' else 'Codes are sent by email. Check your spam folder if the message does not arrive.' if mail_mode=='smtp' else 'Email is not configured. Ask an administrator to set up a sender in Email Settings.'}
 
 
 def rate(c,bucket,limit,seconds,Error):
     cutoff=(now()-timedelta(seconds=seconds)).isoformat(timespec='seconds')
     if c.execute('SELECT count(*) FROM auth_limits WHERE bucket=? AND created>?',(bucket,cutoff)).fetchone()[0]>=limit:
-        raise Error('操作过于频繁，请稍后重试',429)
+        raise Error('Too many attempts. Try again later.',429)
     c.execute('INSERT INTO auth_limits VALUES(?,?)',(bucket,now().isoformat(timespec='seconds')))
     c.execute('DELETE FROM auth_limits WHERE created<?',((now()-timedelta(days=1)).isoformat(timespec='seconds'),))
     c.commit()
@@ -51,43 +52,43 @@ def rate(c,bucket,limit,seconds,Error):
 def email_address(value,Error):
     value=str(value or '').strip().lower()
     if len(value)>254 or not re.fullmatch(r'[a-z0-9.!#$%&\x27*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,}',value):
-        raise Error('请输入有效邮箱地址')
+        raise Error('Enter a valid email address.')
     return value
 
 
 def password(value,Error):
     if not isinstance(value,str) or not 10<=len(value)<=128:
-        raise Error('密码需要10–128个字符')
+        raise Error('Use a password between 10 and 128 characters.')
     if not re.search(r'[A-Za-z]',value) or not re.search(r'[0-9]',value):
-        raise Error('密码至少包含字母和数字')
+        raise Error('The password must contain letters and numbers.')
     return value
 
 
 def deliver(email,code,purpose):
-    mailservice.send(email, 'CampusCare '+('注册邮箱验证' if purpose=='register' else '重置密码'),
-                     f'你的 CampusCare 验证码是：{code}\n有效期10分钟，仅可使用一次。\n如果不是你本人操作，请忽略这封邮件。')
+    mailservice.send(email, 'SmartCampus '+('Registration Verification' if purpose=='register' else 'Password Reset'),
+                     f'Your SmartCampus verification code is: {code}\nThe code expires after 10 minutes and can be used once.\nIf you did not request this code, ignore this email.')
 
 
 def verify(c,body,purpose,hash_password,Error):
     email=email_address(body.get('email'),Error)
     row=c.execute('SELECT * FROM email_codes WHERE id=? AND email=? AND purpose=?',(str(body.get('challenge_id','')),email,purpose)).fetchone()
     if not row or row['used'] or row['attempts']>=5 or row['expires']<=now().isoformat(timespec='seconds'):
-        raise Error('验证码无效或已过期，请重新获取')
+        raise Error('The verification code is invalid or expired. Request a new one.')
     code=str(body.get('code',''))
     if not re.fullmatch(r'\d{6}',code) or not hmac.compare_digest(hash_password(code,row['salt']),row['code_hash']):
         c.execute('UPDATE email_codes SET attempts=attempts+1 WHERE id=?',(row['id'],));c.commit()
-        raise Error('验证码不正确；最多尝试5次')
+        raise Error('Incorrect verification code. You have up to five attempts.')
     return email,row['id']
 
 
 def handle(c,path,body,client,hash_password,Error):
     if path=='/api/auth/code':
         purpose=body.get('purpose')
-        if purpose not in ['register','reset']:raise Error('验证码用途无效')
+        if purpose not in ['register','reset']:raise Error('Invalid verification request.')
         email=email_address(body.get('email'),Error)
         mail_mode = mode()
-        if mail_mode not in ['demo','smtp']:raise Error('邮件服务尚未配置，暂时不能发送验证码',503)
-        if mail_mode=='demo' and client not in ['127.0.0.1','::1']:raise Error('演示验证码仅允许本机访问',403)
+        if mail_mode not in ['demo','smtp']:raise Error('Email is not configured. A verification code cannot be sent.',503)
+        if mail_mode=='demo' and client not in ['127.0.0.1','::1']:raise Error('Demo verification codes are available only on this computer.',403)
         c.execute('BEGIN IMMEDIATE')
         rate(c,'code-ip:'+client,20,3600,Error)
         c.execute('BEGIN IMMEDIATE')
@@ -97,8 +98,8 @@ def handle(c,path,body,client,hash_password,Error):
         c.execute('BEGIN IMMEDIATE')
         # Settings writes take the same DB lock; re-check after rate-limit commits.
         mail_mode = mode()
-        if mail_mode not in ['demo', 'smtp']:raise Error('邮件服务已停用，请联系管理员',503)
-        if mail_mode=='demo' and client not in ['127.0.0.1','::1']:raise Error('演示验证码仅允许本机访问',403)
+        if mail_mode not in ['demo', 'smtp']:raise Error('Email is disabled. Contact an administrator.',503)
+        if mail_mode=='demo' and client not in ['127.0.0.1','::1']:raise Error('Demo verification codes are available only on this computer.',403)
         c.execute('UPDATE email_codes SET used=1 WHERE email=? AND purpose=?',(email,purpose))
         c.execute('DELETE FROM email_codes WHERE expires<?',((now()-timedelta(days=1)).isoformat(timespec='seconds'),))
         c.execute('INSERT INTO email_codes(id,email,purpose,salt,code_hash,created,expires,client) VALUES(?,?,?,?,?,?,?,?)',(cid,email,purpose,salt,hash_password(code,salt),now().isoformat(timespec='seconds'),(now()+timedelta(minutes=10)).isoformat(timespec='seconds'),client))
@@ -106,40 +107,40 @@ def handle(c,path,body,client,hash_password,Error):
             try:deliver(email,code,purpose)
             except (OSError,ValueError,KeyError):
                 c.execute('UPDATE email_codes SET used=1 WHERE id=?',(cid,));c.commit()
-                raise Error('邮件发送失败，请稍后重试或联系管理员',503)
-        result={'challenge_id':cid,'expires_in':600,'resend_after':60,'message':'如邮箱可用于本次操作，验证码将发送至该邮箱。请检查收件箱及垃圾邮件。','mode':mail_mode}
-        if mail_mode=='demo':result.update(demo_code=code,message='本机测试验证码，仅用于演示，未实际发送邮件。')
+                raise Error('The email could not be sent. Try again or contact an administrator.',503)
+        result={'challenge_id':cid,'expires_in':600,'resend_after':60,'message':'If this address is eligible, a code will be sent. Check your inbox and spam folder.','mode':mail_mode}
+        if mail_mode=='demo':result.update(demo_code=code,message='Local demo verification code. No email was sent.')
         return result
     if path=='/api/auth/register':
         uid=str(body.get('username','')).strip().lower()
-        if not re.fullmatch(r'[a-z][a-z0-9_]{3,31}',uid):raise Error('用户名需4–32位，以字母开头，只含字母、数字、下划线')
+        if not re.fullmatch(r'[a-z][a-z0-9_]{3,31}',uid):raise Error('Use 4–32 letters, numbers, or underscores, starting with a letter.')
         name=str(body.get('name','')).strip()
-        if not 2<=len(name)<=50:raise Error('姓名需2–50个字符')
-        identity=body.get('identity','学生')
-        if identity not in ['学生','教师'] or body.get('role','user')!='user':raise Error('自助注册仅支持学生或教师账号',403)
+        if not 2<=len(name)<=50:raise Error('The name must be 2–50 characters.')
+        identity=english_data.identity(body.get('identity','Student'))
+        if identity not in ['Student','Faculty'] or body.get('role','user')!='user':raise Error('Self-registration is available only to students and faculty.',403)
         number=str(body.get('student_no','')).strip().upper()
-        if not re.fullmatch(r'[A-Z0-9-]{3,30}',number):raise Error('请填写3–30位学号或工号，仅含字母、数字、连字符')
+        if not re.fullmatch(r'[A-Z0-9-]{3,30}',number):raise Error('Enter a 3–30 character student or staff ID using letters, numbers, or hyphens.')
         cls=str(body.get('class_name','')).strip();department=str(body.get('department','')).strip()
-        if identity=='学生' and not 1<=len(cls)<=80:raise Error('学生注册必须填写班级（最多80字符）')
-        if len(cls)>80 or len(department)>80:raise Error('班级或院系信息过长')
+        if identity=='Student' and not 1<=len(cls)<=80:raise Error('Students must provide a class name of up to 80 characters.')
+        if len(cls)>80 or len(department)>80:raise Error('The class or department exceeds the length limit.')
         secret=password(body.get('password'),Error)
         c.execute('BEGIN IMMEDIATE')
-        if c.execute('SELECT 1 FROM users WHERE lower(id)=? OR student_no=?',(uid,number)).fetchone():raise Error('用户名或学号/工号已注册',409)
+        if c.execute('SELECT 1 FROM users WHERE lower(id)=? OR student_no=?',(uid,number)).fetchone():raise Error('This username or student or staff ID is already registered.',409)
         email,cid=verify(c,body,'register',hash_password,Error)
-        if c.execute('SELECT 1 FROM users WHERE email=?',(email,)).fetchone():raise Error('邮箱已注册，请登录或找回密码',409)
+        if c.execute('SELECT 1 FROM users WHERE email=?',(email,)).fetchone():raise Error('This email is already registered. Sign in or reset your password.',409)
         salt=secrets.token_hex(16)
         c.execute('INSERT INTO users(id,name,role,identity,room,skill,salt,password,email,student_no,class_name,department,email_verified,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,1,?)',(uid,name,'user',identity,'','',salt,hash_password(secret,salt),email,number,cls,department,now().isoformat(timespec='seconds')))
         c.execute('UPDATE email_codes SET used=1 WHERE id=?',(cid,))
-        return {'ok':True,'username':uid,'message':'注册成功，请登录。宿舍权限需由管理人员另行核实分配。'}
+        return {'ok':True,'username':uid,'message':'Registration complete. Sign in to continue. Residence access is verified separately by an administrator.'}
     if path=='/api/auth/reset':
         secret=password(body.get('password'),Error)
         c.execute('BEGIN IMMEDIATE')
         email,cid=verify(c,body,'reset',hash_password,Error)
         user=c.execute('SELECT id FROM users WHERE email=? AND email_verified=1 AND enabled=1',(email,)).fetchone()
-        if not user:raise Error('验证码或账号无效，请确认注册邮箱')
+        if not user:raise Error('The code or account is invalid. Check your registered email address.')
         salt=secrets.token_hex(16)
         c.execute('UPDATE users SET password=?,salt=? WHERE id=?',(hash_password(secret,salt),salt,user['id']))
         c.execute('UPDATE email_codes SET used=1 WHERE email=?',(email,))
         c.execute('DELETE FROM sessions WHERE user_id=?',(user['id'],))
-        return {'ok':True,'message':'密码已重置，旧登录会话已失效，请使用新密码登录。'}
-    raise Error('接口不存在',404)
+        return {'ok':True,'message':'Password reset. Existing sessions have ended. Sign in with your new password.'}
+    raise Error('Endpoint not found.',404)

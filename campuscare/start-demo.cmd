@@ -29,6 +29,6 @@ py -3 -B start_demo.py
 if not errorlevel 1 exit /b 0
 
 :failed
-echo CampusCare could not start. See the message above.
+echo SmartCampus could not start. See the message above.
 pause
 exit /b 1
