@@ -2,6 +2,8 @@
 const workspace = (function () {
     const items = {
         overview: ['grid', 'Dashboard'],
+        learning: ['spark', 'Intelligent Q&A'],
+        'academic-risk': ['chart', 'Academic Risk'],
         'admin-services': ['ticket', 'Administrative Services'],
         applications: ['file', 'Application Pre-review'],
         report: ['plus', 'Report a Facility Issue'],
@@ -25,6 +27,8 @@ const workspace = (function () {
         guide: '#admin-services/guide',
     };
     const catalog = [
+        {key: 'learning', group: 'learning', icon: 'spark', tag: 'Learning Support', title: 'Intelligent Q&A Assistant', desc: 'Ask campus-service questions and receive answers with cited sources.', target: '#campus/learning', role: 'user'},
+        {key: 'academic-risk', group: 'learning', icon: 'chart', tag: 'Learning Support', title: 'Academic Risk Warning', desc: 'Review a transparent engagement indicator based on recent service activity.', target: '#campus/academic-risk', role: 'user'},
         {key: 'transcript', group: 'documents', icon: 'ticket', tag: 'Administrative Services', title: 'Transcript Request', desc: 'Request a transcript for further study, an internship, or an exchange program.', target: paths.transcript, role: 'user'},
         {key: 'enrollment', group: 'documents', icon: 'check', tag: 'Administrative Services', title: 'Proof of Enrollment', desc: 'Request a letter confirming your current enrollment.', target: paths.enrollment, role: 'user'},
         {key: 'pre-review', group: 'documents', icon: 'file', tag: 'Application Services', title: 'Application Pre-review', desc: 'Check requirements, materials, and eligibility before administrative review.', target: '#campus/applications', role: 'user'},
@@ -43,12 +47,13 @@ const workspace = (function () {
     function nav(user) {
         if (user.role === 'admin') return [
             ['Overview', ['overview']],
+            ['Learning Support', ['learning', 'academic-risk']],
             ['Administrative Services', ['admin-services', 'applications']],
             ['Campus Facilities', ['tickets', 'report', 'bookings', 'map', 'assets', 'facility-overview', 'maintenance']],
             ['System Settings', ['users', 'assistant']],
         ];
         if (user.role === 'technician') return [['Service navigation', ['overview', 'tickets', 'map', 'assets']]];
-        return [['Service navigation', ['overview', ...(supports(user) ? ['admin-services'] : []), 'applications', 'report', 'bookings', 'tickets', 'map', 'assets']]];
+        return [['Service navigation', ['overview', 'learning', 'academic-risk', ...(supports(user) ? ['admin-services'] : []), 'applications', 'report', 'bookings', 'tickets', 'map', 'assets']]];
     }
     const allowed = (user, id) => nav(user).some(([, ids]) => ids.includes(id));
 

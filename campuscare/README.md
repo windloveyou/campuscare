@@ -137,18 +137,20 @@ SMTP 模式不在页面返回验证码；发送失败会显示错误，不伪装
 node test_browser.mjs
 ```
 
-## 目录
+## Source layout
 
 ```text
-server.py          HTTP API、SQLite、角色权限、规则辅助与模型适配
-forecast.py        可复现的合成数据预测实验
-web/               无构建依赖的页面、交互、校园 SVG 地图
-test_system.py     HTTP 集成测试
-test_browser.mjs   桌面/手机页面与三角色流程验收
-docs/              设计说明、接口、演示步骤与验收记录
-artifacts/         浏览器验收截图
-data/              运行时 SQLite（不提交）
+backend/           Python API, authentication, SQLite, permissions, and module business logic
+frontend/          Build-free HTML, CSS, JavaScript, images, and the campus map
+server.py          Compatibility launcher for backend.server
+test_*.py          Unit and HTTP integration tests
+test_*_browser.mjs Optional browser acceptance tests
+docs/              Architecture, module mapping, setup, and verification notes
+artifacts/         Local browser-test screenshots
+data/              Runtime SQLite data (not committed)
 ```
+
+See [the six-module integration map](docs/MODULES.md) for the proposal-to-code mapping and the frontend/backend boundary.
 
 项目定位：可运行的课程原型。预测实验、初始校园和维护历史均不代表真实校园数据或实际预测性能。
 

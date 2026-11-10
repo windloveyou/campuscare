@@ -21,8 +21,8 @@
 | 文件 | 职责 |
 | --- | --- |
 | `admin_services.py` | 申请类型、角色范围、材料校验、状态流转、历史记录和数据表 |
-| `web/admin-services.js`、`web/admin-services.css` | 学生申请、办理记录、补交和管理员审批，复用现有侧栏、卡片、抽屉和按钮 |
-| `server.py`、`web/app.js`、`web/index.html` | 挂接模块路由、启动迁移、加载页面资源和增加导航；共用会话、CSRF、SQLite |
+| `frontend/admin-services.js`、`frontend/admin-services.css` | 学生申请、办理记录、补交和管理员审批，复用现有侧栏、卡片、抽屉和按钮 |
+| `backend/server.py`、`frontend/app.js`、`frontend/index.html` | 挂接模块路由、启动迁移、加载页面资源和增加导航；共用会话、CSRF、SQLite |
 | `demo_accounts.py` | 演示账号的角色称呼和演示学生资料；启动时仅匹配并更新旧演示账号 |
 | `test_admin_services.py`、`test_admin_services_browser.mjs` | 接口、数据、权限、浏览器流程和移动端验收 |
 

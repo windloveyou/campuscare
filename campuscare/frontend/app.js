@@ -201,6 +201,12 @@ function render() {
     } else if (page === 'applications') {
         content.innerHTML = applicationsPage();
         bindApplicationsPage();
+    } else if (page === 'learning') {
+        content.innerHTML = learningPage();
+        bindLearningPage();
+    } else if (page === 'academic-risk') {
+        content.innerHTML = academicRiskPage();
+        bindAcademicRiskPage();
     } else {
         content.innerHTML = facilities.views[page]();
         facilities.bind();
