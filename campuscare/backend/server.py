@@ -27,7 +27,7 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from http.cookies import SimpleCookie
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs, quote
-
+# 
 ROOT = Path(__file__).resolve().parent.parent
 FRONTEND_ROOT = ROOT / "frontend"
 WEB_FILES = {
