@@ -75,14 +75,6 @@ const facilities = (() => {
         return head('Campus Map', 'Browse buildings, rooms, and individual assets on this illustrative campus map.', newButton()) + `<div class="two-col"><section class="card"><div class="card-head"><h2>GCU · Demo Campus</h2><button class="linkbtn" data-action="geolocate">${icon('pin')} Use My Location</button></div>${mapSVG()}<div class="card-body"><div id="geo-result" class="notice">This campus is fictional. GPS shows your browser’s coordinates without mapping them to the demo campus.</div><div class="map-locations">${state.locations.map(l=>`<button class="tag-button ${l.id===loc.id?'active':''}" data-location="${l.id}">${esc(l.name)}</button>`).join('')}</div><label for="location-query">Location or Asset ID</label><div class="flex"><input id="location-query" placeholder="e.g., A201, D1 shared washing machine, R1-LIGHT-03"><button class="btn secondary" data-action="locate-text">Find</button></div><div id="location-results" class="small muted" style="margin-top:10px">Search the asset register by keyword.</div></div></section><section class="card building-detail"><div class="eyebrow">LOCATION DETAILS</div><h2>${esc(loc.name)}</h2><p class="subtitle">${esc(loc.description)} · ${assets.length}  visible facilities</p><div class="room-grid">${rooms.map(r=>`<button class="room ${r===selectedRoom?'active':''}" data-room="${r}">${r==='PUBLIC'?'Public Area':r==='OUTDOOR'?'Outdoor Facilities':esc(r)}<div class="tiny muted" style="margin-top:7px">${assets.filter(a=>a.room===r).length}  facilities</div></button>`).join('')}</div><div style="max-height:440px;overflow:auto">${assets.filter(a=>!selectedRoom||a.room===selectedRoom).map(a=>`<div class="ticket-row" data-asset="${a.id}" tabindex="0" role="button"><div class="ticket-icon">${icon('box')}</div><div style="flex:1"><div class="ticket-title">${esc(a.name)}</div><div class="ticket-meta">${esc(a.id)}</div></div>${badge(a.status)}</div>`).join('')||'<div class="empty">No assets are registered in this area.</div>'}</div></section></div>`;
     }
 
-    function assetsPage() {
-        return head('Asset Register', 'Find each asset’s ID, location, and maintenance history.', newButton()) + `<div class="toolbar"><input id="filter-search" placeholder="Search by asset name, ID, or room" value="${esc(filters.search)}"><select id="filter-location"><option value="">All Areas</option>${state.locations.map(l=>`<option value="${l.id}" ${filters.location===l.id?'selected':''}>${esc(l.name)}</option>`).join('')}</select><select id="filter-status"><option value="">All Statuses</option>${['normal','pending','assigned','in_progress','waiting_parts','review','unknown'].map(s=>`<option value="${s}" ${filters.status===s?'selected':''}>${labels[s]}</option>`).join('')}</select></div><div class="card table-wrap"><table><thead><tr><th>Asset or ID</th><th>Location</th><th>Recorded Status</th><th>Last Verified</th><th>Actions</th></tr></thead><tbody id="assets-body">${assetRows()}</tbody></table></div>`;
-    }
-
-    function assetRows() {
-        let rows = state.assets.filter(a => (!filters.location || a.location_id === filters.location) && (!filters.status || a.status === filters.status) && [a.name, a.id, a.room].join(' ').toLowerCase().includes(filters.search.toLowerCase()));
-        return rows.map(a => `<tr><td><strong>${esc(a.name)}</strong><div class="mono muted" style="margin-top:5px">${esc(a.id)}</div></td><td>${esc(a.location_name)}<div class="small muted">${esc(a.room)} · ${esc(a.position)}</div></td><td>${badge(a.status)}</td><td class="small muted">${date(a.last_checked)}</td><td><button class="linkbtn" data-asset="${a.id}">View Record ↗</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">No matching assets</td></tr>';
-    }
 
     function ticketsPage() {
         return head(state.user.role === 'technician' ? 'My Maintenance Tasks' : 'Work Orders', state.user.role === 'user' ? 'Track your reports and the work orders you follow.' : 'Track maintenance from initial review through completion.', newButton()) + `<div class="toolbar"><input id="filter-search" placeholder="Search by title, asset, or work order ID" value="${esc(filters.search)}"><select id="filter-status"><option value="">All Statuses</option>${Object.keys(labels).slice(0,7).map(s=>`<option value="${s}" ${filters.status===s?'selected':''}>${labels[s]}</option>`).join('')}</select><span class="small muted">Showing work orders available to your account</span></div><div class="card table-wrap"><table><thead><tr><th>Work Order</th><th>Asset and Location</th><th>Status</th><th>Priority</th><th>Technicians</th><th>Last Updated</th></tr></thead><tbody id="tickets-body">${ticketRows()}</tbody></table></div>`;
@@ -118,7 +110,6 @@ const facilities = (() => {
     }
 
     function bind() {
-        if (page === 'assets' && state.user.role === 'admin') $('.toolbar').insertAdjacentHTML('beforeend', '<button class="btn" data-action="add-asset">Register an Asset</button>');
         $('#filter-search')?.addEventListener('input', e => {
             filters.search = e.target.value;
             updateRows();
@@ -243,7 +234,6 @@ const facilities = (() => {
     }
 
     function updateRows() {
-        if (page === 'assets') $('#assets-body').innerHTML = assetRows();
         if (page === 'tickets') $('#tickets-body').innerHTML = ticketRows();
     }
     async function compressImage(file) {
@@ -435,7 +425,7 @@ const facilities = (() => {
     }
 
     return {
-        views: {map: mapPage, assets: assetsPage, tickets: ticketsPage, report: reportPage,
+        views: {map: mapPage, tickets: ticketsPage, report: reportPage,
             maintenance: maintenancePage, assistant: assistantPage, 'facility-overview': facilityOverview},
         bind, handle, reset, captureDraft,
         resetFilters: () => { filters = emptyFilters(); },

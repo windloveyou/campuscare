@@ -35,7 +35,7 @@ WEB_FILES = {
     **{"/" + name: name for name in (
         "ui.js", "app.js", "workspace.js", "facilities.js", "bookings.js", "applications.js", "learning.js", "auth.js", "mail.js",
         "users.js", "admin-services.js", "landing.js", "motion.js", "style.css", "admin-services.css", "portal.css",
-        "little-wonders.css", "motion.css", "module6.css", "learning.css",
+        "little-wonders.css", "motion.css", "module6.css", "learning.css", "subsystems.css",
         "campus-art.svg", "gcu-quadrangle.webp", "gcu-learning-commons.webp", "gcu-campus-walk.webp",
         "gcu-library-terrace.webp", "gcu-campus-garden.webp", "gcu-gallery-studio.webp", "gcu-gallery-atrium.webp",
         "gcu-service-transcript.webp", "gcu-service-enrollment.webp", "gcu-service-repair.webp",
@@ -899,6 +899,26 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(result, 201 if action == "create" else 200)
                 return
             u = self.auth(c, True)
+            if path == '/api/delete-record':
+                if u['role'] != 'admin':
+                    raise APIError('Only administrators can delete records.', 403)
+                tables = {'user': 'users', 'certificate': 'admin_service_applications', 'application': 'applications', 'booking': 'venue_bookings', 'ticket': 'tickets'}
+                table = tables.get(body.get('kind'))
+                if not table:
+                    raise APIError('Select a valid record type.')
+                record_id = str(body.get('id', '')).strip()
+                if table == 'users' and record_id == u['id']:
+                    raise APIError('You cannot delete your own account.', 409)
+                if not c.execute('SELECT 1 FROM ' + table + ' WHERE id=?', (record_id,)).fetchone():
+                    raise APIError('Record not found.', 404)
+                try:
+                    c.execute('DELETE FROM ' + table + ' WHERE id=?', (record_id,))
+                    c.commit()
+                except sqlite3.IntegrityError:
+                    c.rollback()
+                    raise APIError('This record has related history. Remove related records first or deactivate the account to preserve history.', 409)
+                self.respond({'ok': True})
+                return
             if path == "/api/learning/questions":
                 result = learning_support.ask(c, u, body, APIError)
                 academic_risk.record(c, u["id"], "qa", "qa:" + result["id"])
@@ -1082,6 +1102,13 @@ class Handler(BaseHTTPRequestHandler):
                     + secrets.token_hex(3).upper()
                 )
                 now = NOW()
+                trade = rule_analysis(a, text)["trade"]
+                technician = c.execute(
+                    "SELECT u.id FROM users u LEFT JOIN tickets t ON t.assignee=u.id "
+                    "AND t.status NOT IN ('closed','cancelled') "
+                    "WHERE u.role='technician' AND u.enabled=1 AND lower(u.skill)=lower(?) "
+                    "GROUP BY u.id ORDER BY count(t.id),u.id LIMIT 1", (trade,)
+                ).fetchone()
                 c.execute(
                     'INSERT INTO tickets(id,asset_id,reporter,title,description,status,priority,created,updated) VALUES(?,?,?,?,?,"pending",?,?,?)',
                     (tid, aid, u["id"], title, text, priority, now, now),
@@ -1095,6 +1122,10 @@ class Handler(BaseHTTPRequestHandler):
                         "INSERT INTO attachments VALUES(?,?,?,?)",
                         (secrets.token_hex(12), tid, im["mime"], im["data"]),
                     )
+                if technician:
+                    c.execute("UPDATE tickets SET status='assigned',assignee=? WHERE id=?", (technician['id'], tid))
+                    c.execute("INSERT INTO events(ticket_id,actor,action,note,created) VALUES(?,?,?,?,?)",
+                              (tid, u['id'], 'auto_assigned', 'Automatically assigned by specialty and current workload.', now))
                 self.respond({"id": tid}, 201)
                 return
             if path == "/api/transition":

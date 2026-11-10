@@ -10,7 +10,6 @@ const workspace = (function () {
         bookings: ['calendar', 'Venue Booking'],
         tickets: ['tool', 'Work Orders'],
         map: ['map', 'Campus Map'],
-        assets: ['box', 'Asset Register'],
         'facility-overview': ['chart', 'Facilities Overview'],
         maintenance: ['clock', 'Maintenance and Forecasting'],
         users: ['users', 'User Management'],
@@ -44,16 +43,40 @@ const workspace = (function () {
         : id === 'applications' && user.role === 'admin' ? 'Application Review'
         : items[id]?.[1] || 'Dashboard';
 
+    const subsystems = [
+        {key: 'learning', title: 'Intelligent Learning Support', icon: 'spark', description: 'Find answers and stay connected to your studies.', modules: [
+            {title: '01 · Intelligent Q&A', pages: ['learning']},
+            {title: '02 · Academic Risk Warning', pages: ['academic-risk']},
+        ]},
+        {key: 'campus', title: 'Facility & Resource Management', icon: 'tool', description: 'Report issues, track repairs, and reserve campus spaces.', modules: [
+            {title: '03 · Maintenance & Repair', pages: ['report', 'tickets', 'map', 'facility-overview', 'maintenance', 'assistant']},
+            {title: '04 · Venue Booking', pages: ['bookings']},
+        ]},
+        {key: 'documents', title: 'Administrative Services', icon: 'file', description: 'Request certificates, check materials, and follow progress.', modules: [
+            {title: '05 · Certificate Requests', pages: ['admin-services']},
+            {title: '06 · Application Pre-review', pages: ['applications']},
+        ]},
+    ];
+    function visibleSubsystems(user) {
+        const visible = id => {
+            if (user.role === 'admin') return true;
+            if (user.role === 'technician') return ['tickets', 'map'].includes(id);
+            if (['facility-overview', 'maintenance', 'assistant'].includes(id)) return false;
+            return id !== 'admin-services' || supports(user);
+        };
+        return subsystems.map(system => ({...system, modules: system.modules.map(module => ({...module,
+            pages: module.pages.filter(visible),
+        })).filter(module => module.pages.length)})).filter(system => system.modules.length);
+    }
     function nav(user) {
-        if (user.role === 'admin') return [
-            ['Overview', ['overview']],
-            ['Learning Support', ['learning', 'academic-risk']],
-            ['Administrative Services', ['admin-services', 'applications']],
-            ['Campus Facilities', ['tickets', 'report', 'bookings', 'map', 'assets', 'facility-overview', 'maintenance']],
-            ['System Settings', ['users', 'assistant']],
-        ];
-        if (user.role === 'technician') return [['Service navigation', ['overview', 'tickets', 'map', 'assets']]];
-        return [['Service navigation', ['overview', 'learning', 'academic-risk', ...(supports(user) ? ['admin-services'] : []), 'applications', 'report', 'bookings', 'tickets', 'map', 'assets']]];
+        return [['Overview', ['overview']], ...visibleSubsystems(user).map(system => [system.title, system.modules.flatMap(module => module.pages)]),
+            ...(user.role === 'admin' ? [['Platform Administration', ['users']]] : [])];
+    }
+    function subsystemHome(user) {
+        return `<div class="subsystem-directory">${visibleSubsystems(user).map((system, index) => `<section class="subsystem-panel tone-${system.key}">
+            <header><span class="subsystem-symbol">${icon(system.icon)}</span><span class="subsystem-number">SUBSYSTEM ${String(index + 1).padStart(2, '0')}</span><h2>${system.title}</h2><p>${system.description}</p></header>
+            <div class="subsystem-modules">${system.modules.map(module => `<section><h3>${module.title}</h3><div>${module.pages.map(id => action(id === 'admin-services' ? '#admin-services' : campusUrl(id), `${icon(items[id][0])}<span>${titleOf(id, user)}</span>${linkArrow()}`, 'subsystem-link')).join('')}</div></section>`).join('')}</div>
+        </section>`).join('')}</div>`;
     }
     const allowed = (user, id) => nav(user).some(([, ids]) => ids.includes(id));
 
@@ -62,18 +85,13 @@ const workspace = (function () {
     const action = (route, title, style = 'btn') => `<button type="button" class="${style}" data-route="${esc(route)}">${title}</button>`;
     const linkArrow = () => ` ${icon('arrow')}`;
 
-    function serviceCards(services) {
-        return services.map(item => `<article class="service-tile tone-${item.group}">
-            <div class="service-tile-top"><span class="service-glyph">${icon(item.icon)}</span><span class="service-category">${item.tag}</span></div>
-            <h3>${item.title}</h3><p>${item.desc}</p>
-            ${action(item.target, 'Open Service' + linkArrow(), 'service-link')}
-        </article>`).join('');
-    }
-
     function shell(user, current) {
         const staff = user.role === 'admin';
-        const groups = nav(user);
-        const navHtml = groups.map(([group, ids]) => `<div class="workspace-nav-group">${staff ? `<span class="workspace-nav-label">${group}</span>` : ''}${ids.map(id => `<button type="button" class="navitem ${id === current ? 'active' : ''}" data-page="${id}" ${id === current ? 'aria-current="page"' : ''}>${icon(items[id][0])}${titleOf(id, user)}</button>`).join('')}</div>`).join('');
+        const navButton = id => `<button type="button" class="navitem ${id === current ? 'active' : ''}" data-page="${id}" ${id === current ? 'aria-current="page"' : ''}>${icon(items[id][0])}${titleOf(id, user)}</button>`;
+        const navHtml = navButton('overview') + visibleSubsystems(user).map(system => `<details class="subsystem-nav" ${current === 'overview' || system.modules.some(module => module.pages.includes(current)) ? 'open' : ''}>
+            <summary>${icon(system.icon)}<span>${system.title}</span></summary>
+            ${system.modules.map(module => `<div class="workspace-nav-group"><span class="module-nav-label">${module.title}</span>${module.pages.map(navButton).join('')}</div>`).join('')}</details>`).join('')
+            + (staff ? `<div class="workspace-nav-group"><span class="module-nav-label">Platform Administration</span>${navButton('users')}</div>` : '');
         const profile = `<button type="button" id="profile-button" class="workspace-profile" aria-label="Profile"><span class="avatar" aria-hidden="true">${esc(user.name?.[0] || 'S')}</span><span>${esc(user.name)}</span></button>`;
         const actions = `<div class="top-actions"><button type="button" class="workspace-search" aria-label="Find a Service" data-command>${commandIcon()}</button>
             ${staff ? '<button type="button" class="linkbtn" id="mail-settings-button">Email Settings</button>' : ''}${profile}
@@ -89,8 +107,6 @@ const workspace = (function () {
     function membersHome(s) {
         const student = supports(s.user);
         const tech = s.user.role === 'technician';
-        const services = tech ? ['maintenance', 'map'].map(key => catalog.find(item => item.key === key))
-            : catalog.filter(item => item.role === 'user' && (student || item.group === 'campus'));
         const live = s.tickets.filter(item => !['closed', 'cancelled'].includes(item.status));
         return `<div class="member-home">
             <section class="member-hero"><div class="campus-art" aria-hidden="true"></div><div class="member-hero-copy">
@@ -101,8 +117,8 @@ const workspace = (function () {
                     : action(campusUrl(tech ? 'tickets' : 'report'), (tech ? 'View Maintenance Tasks' : 'Report an Issue') + linkArrow(), 'btn campus-primary')}
                     ${student ? action(paths.requests, 'View Applications', 'btn campus-quiet') : action(campusUrl('map'), 'Open Campus Map', 'btn campus-quiet')}</div>
             </div><span class="member-hero-stamp">GCU / CAMPUS PLAN</span></section>
-            <div class="editorial-head home-section-head"><div><span class="editorial-label"><i></i> SERVICE DIRECTORY</span><h2>${tech ? 'Maintenance and Campus Map' : 'Popular Services'}</h2></div></div>
-            <div class="service-grid member-services">${serviceCards(services)}</div>
+            <div class="editorial-head home-section-head"><div><span class="editorial-label"><i></i> YOUR WORKSPACE</span><h2>Explore by subsystem</h2></div></div>
+            ${subsystemHome(s.user)}
             <section class="home-activity card"><div class="card-head"><div><h2>${tech ? 'Pending Maintenance' : 'My Activity'}</h2><p>Track requests available to your account.</p></div>
                 ${action(campusUrl('tickets'), tech ? 'All Maintenance Tasks' : 'View Work Orders', 'btn secondary')}</div>
                 <div class="card-body"><div class="home-activity-grid">
@@ -128,22 +144,8 @@ const workspace = (function () {
                 <div>${metric(campusUrl('tickets'), 'Reports Awaiting Review', unassigned, 'tool')}</div>
                 <div>${metric(campusUrl('maintenance'), 'Inspections Awaiting Review', inspections, 'clock')}</div>
             </div>
-            <div class="operations-grid">
-                <section class="card operations-queue"><div class="card-head"><div><h2>Administrative Services</h2><p>Choose a queue to view and process applications.</p></div></div><div class="card-body">
-                    ${operationsLink(paths.unassigned, 'Claim Application', 'View pending applications without an assigned reviewer.', 'ticket')}
-                    ${operationsLink(paths.mine, 'Assigned to Me', 'View pending applications assigned to you.', 'users')}
-                    ${operationsLink(paths.guide, 'Review Guide', 'Review records, request documents, and reassign applications.', 'check')}
-                </div></section>
-                <section class="card operations-queue"><div class="card-head"><div><h2>Campus Facilities</h2><p>${active.length}  open work orders.</p></div></div><div class="card-body">
-                    ${operationsLink(campusUrl('tickets'), 'Maintenance Work Orders', 'Track requests from initial review to completion.', 'tool')}
-                    ${operationsLink(campusUrl('facility-overview'), 'Facilities Overview', 'View the campus map and facility records by area.', 'map')}
-                    ${operationsLink(campusUrl('users'), 'User Management', 'Manage roles, account status, and campus records.', 'users')}
-                </div></section>
-            </div></div>`;
-    }
-
-    function operationsLink(route, title, desc, symbol) {
-        return action(route, `<span class="service-glyph">${icon(symbol)}</span><span><strong>${title}</strong><span>${desc}</span></span>${icon('arrow')}`, 'operations-link');
+            ${subsystemHome(s.user)}
+            </div>`;
     }
 
     async function bindHome(user) {
@@ -235,6 +237,6 @@ const workspace = (function () {
         input.focus();
     }
 
-    return {allowed, campusUrl, catalog, shell, bindHome, openCommand,
+    return {allowed, campusUrl, catalog, subsystems, shell, bindHome, openCommand,
         home: state => state.user.role === 'admin' ? adminHome(state) : membersHome(state)};
 })();

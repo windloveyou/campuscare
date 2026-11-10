@@ -18,6 +18,20 @@ function bindUsersPage() {
     $('#users-prev').onclick = ()=>{usersQuery.page--;loadUsers();};
     $('#users-next').onclick = ()=>{usersQuery.page++;loadUsers();};
     $('#user-create').onclick = ()=>openUserEditor();
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'btn secondary';
+    deleteButton.textContent = 'Delete Record';
+    $('#user-create').after(deleteButton);
+    deleteButton.onclick = () => {
+        drawer(`<h2>Delete Record</h2><p>Deletion is permanent. Records with related history may require deactivation instead.</p><form id="delete-record-form"><label>Record type<select name="kind"><option value="user">User</option><option value="certificate">Certificate Request</option><option value="application">Pre-review Application</option><option value="booking">Venue Booking</option><option value="ticket">Work Order</option></select></label><label>Record ID<input name="id" required></label><button class="btn" type="submit">Delete</button></form>`);
+        $('#delete-record-form').onsubmit = async event => {
+            event.preventDefault();
+            const body = Object.fromEntries(new FormData(event.target));
+            if (!confirm(`Permanently delete ${body.kind} ${body.id}?`)) return;
+            try { await api('/delete-record', body); closeDrawer(); toast('Record deleted.'); loadUsers(); }
+            catch (error) { toast(error.message); }
+        };
+    };
     loadUsers();
 }
 async function loadUsers() {

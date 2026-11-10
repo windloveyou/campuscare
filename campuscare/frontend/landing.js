@@ -12,13 +12,15 @@ const publicLanding = (function () {
         ['gcu-gallery-studio.webp', 'Design Studio', 'Students building architectural models in a design studio'],
         ['gcu-gallery-atrium.webp', 'Academic Atrium', 'A skylit atrium with timber stairs and indoor plants'],
     ];
-    const categories = [['all', 'All Services'], ['documents', 'Administrative Services'], ['campus', 'Facilities and Resources'], ['staff', 'Staff Workspaces']];
+    const categories = [['all', 'All Subsystems'], ...workspace.subsystems.map(system => [system.key, system.title])];
     const servicePhotos = {
         transcript: 'gcu-service-transcript.webp', enrollment: 'gcu-service-enrollment.webp',
         report: 'gcu-service-repair.webp', map: 'gcu-service-map.webp',
         review: 'gcu-service-review.webp', maintenance: 'gcu-service-maintenance.webp',
+        learning: 'gcu-learning-commons.webp', 'academic-risk': 'gcu-gallery-studio.webp',
+        bookings: 'gcu-gallery-atrium.webp', 'pre-review': 'gcu-service-review.webp',
     };
-    const serviceAudiences = {transcript: 'Student', enrollment: 'Student', report: 'Students and Faculty', map: 'Campus Members', review: 'Administrators', maintenance: 'Technicians'};
+    const serviceAudiences = {transcript: 'Students', enrollment: 'Students', report: 'Students and Faculty', map: 'Campus Members', review: 'Administrators', maintenance: 'Technicians', learning: 'Students and Faculty', 'academic-risk': 'Students and Faculty', bookings: 'Students and Faculty', 'pre-review': 'Students and Faculty'};
     const counter = index => String(index + 1).padStart(2, '0');
     let dispose = () => {};
 
@@ -45,17 +47,20 @@ const publicLanding = (function () {
 
     // Adapted from the template's class-card markup and its original tag/image layout.
     function cards(active = 'all') {
-        return workspace.catalog.map((item, index) => ({item, index}))
-            .filter(({item}) => active === 'all' || item.group === active).map(({item, index}) => {
-            const file = servicePhotos[item.key];
+        return workspace.subsystems.filter(system => active === 'all' || system.key === active).map(system => {
+            const entries = workspace.catalog.filter(item => item.group === system.key || (system.key === 'campus' && item.key === 'maintenance') || (system.key === 'documents' && item.key === 'review'));
+            return `<section class="public-subsystem"><header class="public-subsystem-head"><span>${icon(system.icon)}</span><div><h3>${system.title}</h3><p>${system.description}</p></div></header><div class="subsystem-service-grid">${entries.map((item, index) => {
+            const file = servicePhotos[item.key] || 'gcu-quadrangle.webp';
+            const module = system.modules.find(module => module.pages.some(page => item.target.includes(page))) || system.modules[0];
             return `<article class="class-card" data-service-group="${item.group}">
-                <div class="class-img-wrap" data-parallax="13"><img src="/${file}" alt="" class="class-img" loading="lazy">
-                    <span class="class-tag">${item.group === 'staff' ? 'Staff Workspaces' : item.tag}</span><span class="class-index" aria-hidden="true">${counter(index)}</span></div>
+                <div class="class-img-wrap" data-parallax="13"><img src="/${file}" alt="${item.title} campus service" class="class-img" loading="lazy">
+                    <span class="class-tag">${module.title}</span><span class="class-index" aria-hidden="true">${counter(index)}</span></div>
                 <div class="class-body"><div class="class-title-row"><span class="class-symbol">${welcomeIcon(item.key)}</span><h3 class="class-name">${item.title}</h3></div>
                     <p class="class-desc">${item.desc}</p>
                     <div class="class-actions"><span class="class-audience">${icon('users')} ${serviceAudiences[item.key]}</span>
                         <button type="button" class="btn btn-primary btn-sm" data-public-service="${item.key}">Open Service ${icon('arrow')}</button></div></div>
             </article>`;
+        }).join('')}</div></section>`;
         }).join('');
     }
 
@@ -98,8 +103,8 @@ const publicLanding = (function () {
                         class="campus-photo ${i === 0 ? 'active' : ''}" aria-hidden="${i !== 0}" ${i === 0 ? 'fetchpriority="high"' : 'decoding="async"'}>`).join('')}</div>
                 </section>
                 <section class="section ribbon-section" aria-label="Quick services"><div class="container">
-                    <div class="ribbon">${workspace.catalog.map(item => `<button type="button" class="ribbon-item" data-public-service="${item.key}">
-                        <span class="ribbon-icon">${welcomeIcon(item.key)}</span><span class="ribbon-label">${item.title}</span></button>`).join('')}</div>
+                    <div class="ribbon subsystem-ribbon">${workspace.subsystems.map(system => `<a class="ribbon-item" href="#service-catalog" data-subsystem="${system.key}">
+                        <span class="ribbon-icon">${icon(system.icon)}</span><span class="ribbon-label">${system.title}<small>Explore modules ${system.modules.map(module => module.title.slice(0, 2)).join(' & ')}</small></span>${icon('arrow')}</a>`).join('')}</div>
                 </div></section>
                 <section class="section section-cream" id="using-campuscare"><div class="container">
                     <div class="split"><div class="split-img">
@@ -108,9 +113,7 @@ const publicLanding = (function () {
                         ${sectionMarker('overview')}
                         <h2 class="section-title">Campus Services <em>Overview</em></h2>
                         <p>GlobalConnect University (GCU)</p>
-                        <ul class="check-list"><li>Administrative Services: transcripts, proof of enrollment, and application tracking</li>
-                            <li>Facilities and Resources: campus maps, facilities, and maintenance requests</li>
-                            <li>Campus Operations: application review, work orders, and inspections</li></ul>
+                        <ul class="check-list">${workspace.subsystems.map(system => `<li>${system.title}: ${system.description}</li>`).join('')}</ul>
                         <div class="split-footer"><a href="#campus-gallery" class="btn btn-ghost-dark">Browse Campus Gallery ${icon('arrow')}</a>${campusDoodle}</div>
                     </div></div>
                 </div></section>
@@ -187,6 +190,12 @@ const publicLanding = (function () {
         const root = $('.public-site');
         const abort = new AbortController();
         const opts = {signal: abort.signal};
+        root.querySelectorAll('[data-subsystem]').forEach(link => link.addEventListener('click', () => {
+            const key = link.dataset.subsystem;
+            root.querySelectorAll('[data-public-filter]').forEach(button => button.setAttribute('aria-pressed', button.dataset.publicFilter === key));
+            root.querySelector('#public-services').innerHTML = cards(key);
+            portalMotion.watchPublic(root);
+        }, opts));
         const pictures = [...root.querySelectorAll('.hero-bg img')];
         const pause = root.querySelector('.gallery-play');
         const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
