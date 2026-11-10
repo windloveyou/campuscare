@@ -743,6 +743,13 @@ tbody tr:hover {
     background: #fafcf8
 }
 
+td.booking-text {
+    min-width: 10rem;
+    max-width: 22rem;
+    white-space: normal;
+    overflow-wrap: anywhere
+}
+
 td .small {
     margin-top: 5px
 }

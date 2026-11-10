@@ -12,6 +12,7 @@ import threading
 import urllib.request
 import urllib.error
 import accounts
+import bookings
 import mailservice
 import user_admin
 from datetime import datetime, timedelta, timezone
@@ -66,6 +67,7 @@ def seed():
         """
         )
         accounts.migrate(c)
+        bookings.migrate(c)
         if c.execute("SELECT count(*) FROM users").fetchone()[0]:
             return
         people = [
@@ -590,6 +592,7 @@ class Handler(BaseHTTPRequestHandler):
             name = {
                 "/": "index.html",
                 "/app.js": "app.js",
+                "/bookings.js": "bookings.js",
                 "/auth.js": "auth.js",
                 "/mail.js": "mail.js",
                 "/users.js": "users.js",
@@ -613,6 +616,12 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(raw)
             return
         with connect() as c:
+            if path == "/api/bookings":
+                c.execute("BEGIN")
+                u = self.auth(c)
+                query = parse_qs(parsed.query, keep_blank_values=True)
+                self.respond(bookings.listing(c, u, query, APIError))
+                return
             u = self.auth(c)
             if path == '/api/users':
                 self.respond(user_admin.listing(c,u,parse_qs(parsed.query),APIError))
@@ -792,6 +801,15 @@ class Handler(BaseHTTPRequestHandler):
                     {"ok": True},
                     cookie=f"campus_session={token}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200",
                 )
+                return
+            if path in bookings.ACTIONS:
+                # Serialize the slot check and state change across all SQLite writers.
+                c.execute("BEGIN IMMEDIATE")
+                u = self.auth(c, True)
+                action = bookings.ACTIONS[path]
+                result = bookings.change(c, u, action, body, APIError)
+                c.commit()
+                self.respond(result, 201 if action == "create" else 200)
                 return
             u = self.auth(c, True)
             if path == '/api/users' or path.startswith('/api/users/'):

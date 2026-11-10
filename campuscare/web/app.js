@@ -9,6 +9,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
     "'": '&#39;'
 } [c]));
 const icons = {
+    calendar: 'M3 5h18v16H3z M7 3v4 M17 3v4 M3 10h18 M8 14h3 M13 14h3 M8 17h3',
     grid: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
     map: 'm3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2z M9 3v16 M15 5v16',
     box: 'm12 3 9 5-9 5-9-5z M3 8v10l9 5 9-5V8 M12 13v10',
@@ -171,7 +172,8 @@ function render() {
         ['map', 'map', '校园地图'],
         ['assets', 'box', '设施台账'],
         ['tickets', 'ticket', u.role === 'technician' ? '我的维修任务' : '工单中心'], ...(u.role !== 'technician' ? [
-            ['report', 'plus', '智能报修']
+            ['report', 'plus', '智能报修'],
+            ['bookings', 'calendar', u.role === 'admin' ? '场地预约审批' : '校园场地预约']
         ] : []), ...(u.role === 'admin' ? [
             ['maintenance', 'chart', '维护与预测'],
             ['users', 'users', '用户管理'],
@@ -187,7 +189,8 @@ function render() {
         report: reportPage,
         maintenance: maintenancePage,
         assistant: assistantPage,
-        users: usersPage
+        users: usersPage,
+        bookings: bookingsPage
     };
     $('#content').innerHTML = (views[page] || overview)() + `<footer class="footer"><span>CampusCare / GlobalConnect University</span><span>COURSE PROTOTYPE · 设备状态来自业务记录，非实时监测</span></footer>`;
     bindPage();
@@ -300,6 +303,7 @@ function assistantPage() {
 }
 
 function bindPage() {
+    if (page === 'bookings' && state.user.role !== 'technician') bindBookingsPage();
     if (page === 'users' && state.user.role === 'admin') bindUsersPage();
     if (page === 'assets' && state.user.role === 'admin') $('.toolbar').insertAdjacentHTML('beforeend', '<button class="btn" data-action="add-asset">登记新设施</button>');
     $('#filter-search')?.addEventListener('input', e => {
