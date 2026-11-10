@@ -1,0 +1,8 @@
+# No third-party runtime dependencies.
+# This project runs on the Python standard library (3.9 and above).
+#
+# Optional: install Ollama separately if you want retrieval-augmented generation
+# instead of the default extractive answering mode. Ollama is not a pip package.
+#
+# Development: tests also use the standard library only.
+#   python -B -m unittest discover -s tests -t .
