@@ -3,6 +3,7 @@ const workspace = (function () {
     const items = {
         overview: ['grid', 'Dashboard'],
         'admin-services': ['ticket', 'Administrative Services'],
+        applications: ['file', 'Application Pre-review'],
         report: ['plus', 'Report a Facility Issue'],
         bookings: ['calendar', 'Venue Booking'],
         tickets: ['tool', 'Work Orders'],
@@ -26,6 +27,7 @@ const workspace = (function () {
     const catalog = [
         {key: 'transcript', group: 'documents', icon: 'ticket', tag: 'Administrative Services', title: 'Transcript Request', desc: 'Request a transcript for further study, an internship, or an exchange program.', target: paths.transcript, role: 'user'},
         {key: 'enrollment', group: 'documents', icon: 'check', tag: 'Administrative Services', title: 'Proof of Enrollment', desc: 'Request a letter confirming your current enrollment.', target: paths.enrollment, role: 'user'},
+        {key: 'pre-review', group: 'documents', icon: 'file', tag: 'Application Services', title: 'Application Pre-review', desc: 'Check requirements, materials, and eligibility before administrative review.', target: '#campus/applications', role: 'user'},
         {key: 'report', group: 'campus', icon: 'tool', tag: 'Campus Facilities', title: 'Report an Issue', desc: 'Report a facility issue, attach photos, and track the repair.', target: '#campus/report', role: 'user'},
         {key: 'bookings', group: 'campus', icon: 'calendar', tag: 'Campus Services', title: 'Venue Booking', desc: 'Check venue availability and submit a booking request.', target: '#campus/bookings', role: 'user'},
         {key: 'map', group: 'campus', icon: 'map', tag: 'Campus Facilities', title: 'Campus Guide', desc: 'Explore campus buildings, residences, and facilities.', target: '#campus/map', role: 'user'},
@@ -34,17 +36,19 @@ const workspace = (function () {
     ];
     const campusUrl = id => '#campus/' + id;
     const supports = u => u.role === 'admin' || (u.role === 'user' && u.identity === 'Student');
-    const titleOf = (id, user) => id === 'tickets' && user.role === 'technician' ? 'My Maintenance Tasks' : items[id]?.[1] || 'Dashboard';
+    const titleOf = (id, user) => id === 'tickets' && user.role === 'technician' ? 'My Maintenance Tasks'
+        : id === 'applications' && user.role === 'admin' ? 'Application Review'
+        : items[id]?.[1] || 'Dashboard';
 
     function nav(user) {
         if (user.role === 'admin') return [
             ['Overview', ['overview']],
-            ['Administrative Services', ['admin-services']],
+            ['Administrative Services', ['admin-services', 'applications']],
             ['Campus Facilities', ['tickets', 'report', 'bookings', 'map', 'assets', 'facility-overview', 'maintenance']],
             ['System Settings', ['users', 'assistant']],
         ];
         if (user.role === 'technician') return [['Service navigation', ['overview', 'tickets', 'map', 'assets']]];
-        return [['Service navigation', ['overview', ...(supports(user) ? ['admin-services'] : []), 'report', 'bookings', 'tickets', 'map', 'assets']]];
+        return [['Service navigation', ['overview', ...(supports(user) ? ['admin-services'] : []), 'applications', 'report', 'bookings', 'tickets', 'map', 'assets']]];
     }
     const allowed = (user, id) => nav(user).some(([, ids]) => ids.includes(id));
 

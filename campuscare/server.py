@@ -13,6 +13,7 @@ import urllib.request
 import urllib.error
 import accounts
 import admin_services
+import applications
 import bookings
 import demo_accounts
 import english_data
@@ -29,9 +30,9 @@ ROOT = Path(__file__).resolve().parent
 WEB_FILES = {
     "/": "index.html",
     **{"/" + name: name for name in (
-        "ui.js", "app.js", "workspace.js", "facilities.js", "bookings.js", "auth.js", "mail.js",
+        "ui.js", "app.js", "workspace.js", "facilities.js", "bookings.js", "applications.js", "auth.js", "mail.js",
         "users.js", "admin-services.js", "landing.js", "motion.js", "style.css", "admin-services.css", "portal.css",
-        "little-wonders.css", "motion.css",
+        "little-wonders.css", "motion.css", "module6.css",
         "campus-art.svg", "gcu-quadrangle.webp", "gcu-learning-commons.webp", "gcu-campus-walk.webp",
         "gcu-library-terrace.webp", "gcu-campus-garden.webp", "gcu-gallery-studio.webp", "gcu-gallery-atrium.webp",
         "gcu-service-transcript.webp", "gcu-service-enrollment.webp", "gcu-service-repair.webp",
@@ -97,10 +98,12 @@ def seed():
         )
         accounts.migrate(c)
         admin_services.migrate(c)
+        applications.migrate(c)
         bookings.migrate(c)
         english_data.migrate(c)
         demo_accounts.migrate(c)
         if c.execute("SELECT count(*) FROM users").fetchone()[0]:
+            applications.seed(c)
             return
         for uid, name, role, identity, room, skill in demo_accounts.PEOPLE:
             salt = secrets.token_hex(16)
@@ -288,6 +291,7 @@ def seed():
                         "Inspection and repair complete. Demo completion verified.",
                     ),
                 )
+        applications.seed(c)
 
 
 def asset_visible(user, a):
@@ -656,6 +660,29 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(bookings.listing(c, u, parse_qs(parsed.query, keep_blank_values=True), APIError))
                 return
             u = self.auth(c)
+            if path == "/api/notices":
+                self.respond(applications.notices(c, u, APIError))
+                return
+            if path == "/api/applications":
+                self.respond(applications.listing(c, u, parse_qs(parsed.query), APIError))
+                return
+            if path.startswith("/api/applications/materials/"):
+                mime, blob, filename = applications.material(c, u, path.split("/")[-1], APIError)
+                self.send_response(200)
+                self.send_header("Content-Type", mime)
+                self.send_header(
+                    "Content-Disposition",
+                    "inline; filename*=UTF-8''" + quote(filename or "material", safe=""),
+                )
+                self.send_header("Content-Length", str(len(blob)))
+                self.send_header("Cache-Control", "private, no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
+                self.end_headers()
+                self.wfile.write(blob)
+                return
+            if path.startswith("/api/applications/"):
+                self.respond(applications.detail(c, u, path.split("/")[-1], APIError))
+                return
             if path == '/api/users':
                 self.respond(user_admin.listing(c,u,parse_qs(parsed.query),APIError))
                 return
@@ -722,6 +749,10 @@ class Handler(BaseHTTPRequestHandler):
                             "configured": bool(os.environ.get("CAMPUSCARE_OLLAMA_URL")),
                             "name": os.environ.get("CAMPUSCARE_MODEL", "qwen3.5:0.8b"),
                         },
+                        "unread_notices": c.execute(
+                            "SELECT count(*) FROM notices WHERE user_id=? AND read_at IS NULL",
+                            (u["id"],),
+                        ).fetchone()[0],
                         "inspections": (
                             [
                                 dict(r)
@@ -852,6 +883,30 @@ class Handler(BaseHTTPRequestHandler):
                 self.respond(result, 201 if action == "create" else 200)
                 return
             u = self.auth(c, True)
+            if path == "/api/notices/read":
+                result = applications.read_notices(c, u, body, APIError)
+                c.commit()
+                self.respond(result)
+                return
+            if path == "/api/applications/check":
+                self.respond(applications.check_only(c, u, body, APIError))
+                return
+            if path == "/api/applications":
+                self.respond(applications.submit(c, u, body, APIError), 201)
+                return
+            if path.startswith("/api/applications/"):
+                parts = path.split("/")
+                action = parts[4] if len(parts) == 5 else None
+                handler = {
+                    "revise": applications.revise,
+                    "decision": applications.decide,
+                    "withdraw": applications.withdraw,
+                }.get(action)
+                if not handler:
+                    raise APIError("Endpoint not found.", 404)
+                result = handler(c, u, parts[3], body, APIError)
+                self.respond(result, 201 if action == "revise" else 200)
+                return
             if path == '/api/users' or path.startswith('/api/users/'):
                 parts = path.split('/')
                 action = 'create' if len(parts)==3 else 'update' if len(parts)==4 else 'password' if len(parts)==5 and parts[4]=='password' else None

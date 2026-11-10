@@ -10,6 +10,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
 } [c]));
 const icons = {
     calendar: 'M3 5h18v16H3z M7 3v4 M17 3v4 M3 10h18 M8 14h3 M13 14h3 M8 17h3',
+    file: 'M6 3h8l4 4v14H6z M14 3v4h4 M9 13h6 M9 17h6',
     grid: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
     map: 'm3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2z M9 3v16 M15 5v16',
     box: 'm12 3 9 5-9 5-9-5z M3 8v10l9 5 9-5V8 M12 13v10',

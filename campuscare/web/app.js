@@ -30,6 +30,7 @@ function clearSession() {
     portalMotion.resetPage();
     facilities.reset();
     if (typeof clearUsersView === 'function') clearUsersView();
+    if (typeof clearApplicationsView === 'function') clearApplicationsView();
     $('#service-command')?.close();
     closeDrawer();
 }
@@ -197,6 +198,9 @@ function render() {
     } else if (page === 'bookings') {
         content.innerHTML = bookings.view();
         bookings.bind();
+    } else if (page === 'applications') {
+        content.innerHTML = applicationsPage();
+        bindApplicationsPage();
     } else {
         content.innerHTML = facilities.views[page]();
         facilities.bind();
@@ -205,6 +209,7 @@ function render() {
     portalMotion.enterPage(content, `${user.id}:${page}:${location.hash}`);
     $('#profile-button').onclick = openProfile;
     if (user.role === 'admin') $('#mail-settings-button').onclick = openMailSettings;
+    if (typeof mountModule6 === 'function') mountModule6();
 }
 
 document.addEventListener('click', async event => {

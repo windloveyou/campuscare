@@ -1,0 +1,511 @@
+/* Module 6 — Intelligent Application Pre-review and Notification.
+   Scoped to the application page, drawer form and notification bell; shares the
+   existing tokens so it looks like the rest of CampusCare. */
+
+.m6-note {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start
+}
+
+.m6-note .icon {
+    flex: 0 0 auto;
+    margin-top: 2px
+}
+
+/* ---- completeness score ---- */
+
+.m6-score {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 106px
+}
+
+.m6-score-value {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -.2px
+}
+
+.m6-score-value i {
+    font-size: 9px;
+    font-style: normal;
+    color: var(--muted);
+    margin-left: 1px
+}
+
+.m6-score-track {
+    display: block;
+    flex: 1;
+    height: 5px;
+    min-width: 44px;
+    border-radius: 4px;
+    background: #eef1ea;
+    overflow: hidden
+}
+
+.m6-score-track i {
+    display: block;
+    height: 100%;
+    border-radius: 4px
+}
+
+/* ---- inline tags ---- */
+
+.m6-tag {
+    display: inline-block;
+    padding: 3px 7px;
+    border-radius: 5px;
+    font-size: 10px;
+    line-height: 1.6;
+    background: #eef1ed;
+    color: #78817a;
+    white-space: nowrap
+}
+
+.m6-tag.red {
+    background: #f9eae7;
+    color: #b36355
+}
+
+.m6-tag.orange {
+    background: #fff2df;
+    color: #ae7835
+}
+
+.m6-tag.green {
+    background: #e7f2eb;
+    color: #37815d
+}
+
+.m6-tag.blue {
+    background: #eaf1f8;
+    color: #5b7e9e
+}
+
+/* ---- detail: head, fields, checks ---- */
+
+.m6-head {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    border-radius: 9px;
+    background: #f7f8f4;
+    border: 1px solid var(--line)
+}
+
+.m6-head .m6-score {
+    min-width: 128px
+}
+
+.m6-head strong {
+    font-size: 13px;
+    font-weight: 500
+}
+
+.m6-head p {
+    margin: 4px 0 0
+}
+
+.m6-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 18px
+}
+
+.m6-field {
+    border-left: 2px solid var(--line);
+    padding-left: 11px
+}
+
+.m6-field.ok {
+    border-color: #cfe2d5
+}
+
+.m6-field.warn {
+    border-color: #ecd4a8
+}
+
+.m6-field.bad {
+    border-color: #e3bcb2
+}
+
+.m6-field-label {
+    font-size: 10px;
+    letter-spacing: .04em;
+    color: var(--muted);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 6px
+}
+
+.m6-field-value {
+    margin-top: 5px;
+    font-size: 12px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    word-break: break-word
+}
+
+.m6-field-fix {
+    margin-top: 6px;
+    font-size: 10px;
+    line-height: 1.7;
+    color: #b36355
+}
+
+.m6-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    font-size: 9px;
+    line-height: 1;
+    background: #e7f2eb;
+    color: #37815d
+}
+
+.m6-flag.warn {
+    background: #fff2df;
+    color: #ae7835
+}
+
+.m6-flag.bad {
+    background: #f9eae7;
+    color: #b36355
+}
+
+.m6-checks {
+    display: grid;
+    gap: 9px
+}
+
+.m6-check {
+    display: flex;
+    gap: 10px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    background: #f7f8f4;
+    border: 1px solid var(--line)
+}
+
+.m6-check.error {
+    background: #fdf5f3;
+    border-color: #f0ddd7
+}
+
+.m6-check.warning {
+    background: #fffaf1;
+    border-color: #f1e5cc
+}
+
+.m6-check.ok {
+    background: #f5f8f2;
+    border-color: #e6eddd
+}
+
+.m6-mark {
+    flex: 0 0 17px;
+    height: 17px;
+    margin-top: 1px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    background: #e7f2eb;
+    color: #37815d
+}
+
+.m6-check.error .m6-mark {
+    background: #f3ded8;
+    color: #a9553f
+}
+
+.m6-check.warning .m6-mark {
+    background: #f7e6c6;
+    color: #9c7530
+}
+
+.m6-check strong {
+    font-size: 12px;
+    font-weight: 500
+}
+
+.m6-check p {
+    margin: 4px 0 0;
+    font-size: 11px;
+    line-height: 1.75;
+    color: #5d6b62
+}
+
+.m6-check .m6-fix {
+    color: #8a6a3d
+}
+
+.m6-passed {
+    margin-top: 12px
+}
+
+.m6-passed summary {
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--muted)
+}
+
+.m6-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px
+}
+
+.m6-chip {
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: #f2f5ee;
+    color: #6b7a68;
+    font-size: 10px
+}
+
+.m6-advice {
+    margin: 0 0 8px;
+    font-size: 11px;
+    line-height: 1.8;
+    color: #5d6b62;
+    padding-left: 11px;
+    border-left: 2px solid #dfe7d6
+}
+
+/* ---- materials ---- */
+
+.m6-materials {
+    display: grid;
+    gap: 10px
+}
+
+.m6-material {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 14px;
+    padding: 11px 13px;
+    border-radius: 8px;
+    background: #f7f8f4;
+    border: 1px solid var(--line)
+}
+
+.m6-material.bad {
+    background: #fdf5f3;
+    border-color: #f0ddd7
+}
+
+.m6-material-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-end
+}
+
+.m6-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border-radius: 5px;
+    background: #fff;
+    border: 1px solid var(--line);
+    font-size: 10px;
+    color: #5d6b62;
+    text-decoration: none
+}
+
+a.m6-file:hover {
+    border-color: #c8d5c6
+}
+
+.m6-file.stored {
+    background: #f2f6ee;
+    border-style: dashed
+}
+
+.m6-file em {
+    font-style: normal;
+    color: #7d8c72
+}
+
+.m6-x {
+    color: #b36355;
+    font-size: 12px;
+    line-height: 1;
+    padding: 0 2px
+}
+
+/* ---- form ---- */
+
+.m6-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    flex-wrap: wrap
+}
+
+.m6-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fbfcf9;
+    font-size: 12px;
+    text-align: left;
+    color: #5d6b62
+}
+
+.m6-tab .tiny {
+    color: var(--muted);
+    font-size: 9px
+}
+
+.m6-tab.active {
+    border-color: #b8cdb5;
+    background: #eff4e9;
+    color: var(--ink)
+}
+
+.m6-full {
+    grid-column: 1/-1
+}
+
+.m6-slots {
+    display: grid;
+    gap: 11px
+}
+
+.m6-slot {
+    padding: 12px 14px;
+    border-radius: 9px;
+    border: 1px dashed #d8dfd3;
+    background: #fbfcf9
+}
+
+.m6-slot-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px
+}
+
+.m6-slot-head strong {
+    font-size: 12px;
+    font-weight: 500
+}
+
+.m6-pick {
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap
+}
+
+.m6-pick input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer
+}
+
+.m6-slot-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px
+}
+
+.m6-slot-files:empty {
+    margin-top: 0
+}
+
+/* ---- notifications ---- */
+
+.m6-bell {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    position: relative
+}
+
+.m6-bell .icon svg {
+    width: 14px;
+    height: 14px
+}
+
+.m6-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    border-radius: 8px;
+    background: #cb934e;
+    color: #fff;
+    font-size: 9px;
+    line-height: 1
+}
+
+.m6-notices {
+    display: grid;
+    gap: 9px
+}
+
+.m6-notice {
+    padding: 12px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: #fbfcf9
+}
+
+.m6-notice.unread {
+    background: #f5f8ef;
+    border-color: #d9e3cf
+}
+
+.m6-notice strong {
+    font-size: 12px;
+    font-weight: 500
+}
+
+.m6-notice p {
+    margin: 6px 0 0;
+    font-size: 11px;
+    line-height: 1.8;
+    color: #5d6b62
+}
+
+@media (max-width: 720px) {
+    .m6-fields {
+        grid-template-columns: 1fr
+    }
+
+    .m6-head {
+        flex-direction: column;
+        align-items: flex-start
+    }
+
+    .m6-material {
+        grid-template-columns: 1fr
+    }
+
+    .m6-material-files {
+        justify-content: flex-start
+    }
+}
+
