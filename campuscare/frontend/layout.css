@@ -45,7 +45,7 @@ button:focus-visible,a:focus-visible,summary:focus-visible { outline:2px solid #
 .subsystem-link span { overflow-wrap:anywhere; }
 .dashboard-map { margin-top:32px; border-top:1px solid var(--line); padding-top:24px; }
 .dashboard-map .page-head h1 { font-size:23px; }
-.dashboard-map .two-col { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+.dashboard-map .two-col { grid-template-columns:minmax(0,1.7fr) minmax(280px,.75fr); align-items:start; }
 .dashboard-map svg { max-width:100%; height:auto; }
 .table-wrap { max-width:100%; overflow:auto; }
 table { width:100%; }

@@ -51,26 +51,87 @@ Windows 现场演示：安装好 Python 后，双击本目录的 [start-demo.cmd
 - 管理看板、受控数据库问答、巡检创建与完成。
 - 可复现的合成事件预测实验：逻辑回归对比近期报修次数基线；少于 3 条历史记录不评估。
 
-## AI 的真实边界
+## 本地 AI 图片辅助（Ollama）
 
-用户已选择先体验规则辅助，模型接入下一步再定。当前不安装或下载大模型，也不声称规则输出是 AI 视觉诊断。
+设施报修可选用本机 Ollama 视觉模型读取用户描述和最多三张照片，整理标题、可见现象、缺失信息、维修专业和建议优先级。用户点击“AI 审核、追问并提交”后，模糊信息会通过弹窗追问；回答会原样附在报修记录中，AI 再整理最终标题与优先级，然后自动创建工单并按专业和工作量派单。若同一设施可能已有工单，系统先让用户选择关注已有工单或确认这是不同问题。模型不判定内部故障，不替代现场检查。Ollama 不可用时页面明确退回文字规则，并注明照片没有被分析。
 
-预留 Ollama `/api/chat` 接口。后续选定并安装支持图像的模型后：
+推荐模型为 `gemma3:4b`：该版本支持图片，下载量约 3.4 GB，适合课程演示。`gemma3:1b` 是纯文字版本，不能用于本项目的照片分析。模型下载完成后在本机运行，不需要云端 API key；首次下载和软件安装需要联网。
+
+### macOS 安装与启动
+
+Apple Silicon 和 Intel Mac 均可先安装 [Homebrew](https://brew.sh/)，再执行：
+
+```sh
+brew install ollama
+ollama serve
+```
+
+保留这个终端窗口，再打开第二个终端：
+
+```sh
+cd campuscare
+ollama pull gemma3:4b
+.venv/bin/python -B start_ai.py --check
+.venv/bin/python -B start_ai.py
+```
+
+打开 http://127.0.0.1:8830/，登录后进入设施报修，选择设施、填写描述并添加 JPEG/PNG 照片，确认位置后点击“AI 审核、追问并提交”。回答弹窗中的必要问题后无需再次填写或点击提交。`start_ai.py` 会检查 Ollama、模型名称和视觉能力，检查失败时不会悄悄启动成规则模式。
+
+本项目已在 Apple Silicon Mac、Ollama `0.40.16` 和 `gemma3:4b` 上完成本机验收：`start_ai.py --check` 识别到视觉能力，实际 PNG 图片请求返回 `mode: model`、中文报修摘要和 `Photo` 观察；模型未把照片中看不到的内部原因写成结论。不同电脑的首次加载时间会因内存和处理器而变化。
+
+### Windows 10/11 安装与启动
+
+1. 从 [Ollama Windows 下载页](https://ollama.com/download/windows) 安装 Ollama。安装后在开始菜单打开 Ollama，或在 PowerShell 运行 `ollama serve`。
+2. 在 PowerShell 下载视觉模型：
+
+```powershell
+ollama pull gemma3:4b
+ollama list
+```
+
+3. 在项目目录创建 Python 环境并启动带 AI 检查的服务：
+
+```powershell
+cd campuscare
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -B start_ai.py --check
+.\.venv\Scripts\python.exe -B start_ai.py
+```
+
+Windows 防火墙如果询问网络访问，本机演示只需要允许专用网络。网站连接 `127.0.0.1:11434`，无需把 Ollama 暴露到公网。关闭 Ollama 或项目终端后服务停止，重新打开并执行相同启动命令即可。
+
+### AI 故障检查
+
+```sh
+ollama list
+curl http://127.0.0.1:11434/api/version
+```
+
+- `Local AI is not ready`：确认 Ollama 正在运行，并已执行 `ollama pull gemma3:4b`。
+- 下载卡在 `pulling manifest` 或显示 `redirect target not allowed`：代理/VPN 的 Fake-IP DNS 可能把 Cloudflare 下载域名解析到 `198.18.x.x`。优先关闭该网络工具的 Fake-IP 模式，或把 Ollama/Cloudflare Storage 域名设为真实 DNS/直连。确认自己使用的是 Ollama 官方模型库且必须经过受控的 Fake-IP 代理时，可仅对这一次下载执行 `ollama pull --insecure gemma3:4b`；完成后正常运行 Ollama，不要把该参数用于项目服务。
+- 图片按钮仍显示规则模式：必须用 `start_ai.py` 启动；普通 `server.py` 不会自动启用模型。
+- 首次图片分析较慢：模型需要先载入内存，后续请求通常更快。
+
+可用环境变量覆盖默认连接，项目不会自动读取 `.env`：
 
 ```sh
 CAMPUSCARE_OLLAMA_URL=http://127.0.0.1:11434 \
-CAMPUSCARE_MODEL=你的实际模型名称 \
-.venv/bin/python -B server.py
+CAMPUSCARE_MODEL=gemma3:4b \
+.venv/bin/python -B start_ai.py
 ```
 
-接口按 Ollama 官方格式传递文字及 base64 图片，使用 JSON 输出。调用失败明确退回规则辅助；模型的内部故障结论始终需要人工核查。默认候选名 `qwen3.5:0.8b` 不表示此模型已经安装或验证。
+接口按 Ollama `/api/chat` 格式传递文字及 base64 图片，要求 JSON 输出。模型生成的可见现象、分类和优先级都需用户确认。合成数据的故障风险实验是另一个独立模块；安装视觉模型不会把它变成真实校园预测。
 
-参考：
-- https://docs.ollama.com/api/chat
-- https://docs.ollama.com/capabilities/vision
-- https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API
+参考：[Ollama Vision](https://docs.ollama.com/capabilities/vision)、[Ollama API](https://docs.ollama.com/api/chat)、[Gemma 3 模型](https://ollama.com/library/gemma3)、[浏览器定位接口](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API)。
 
-现阶段不包括：语义向量检索、图像相似度匹配、照片门牌 OCR 定位、自动派单、自由式管理问答、真实数据训练的故障预测。地点搜索为台账关键词匹配，重复工单使用同设备约束与字符双字相似度。以上都作为后续可替换模块，而不是假装已实现。
+现阶段不包括：语义向量检索、图像相似度匹配、照片门牌 OCR 定位、真实 BIM/传感器接入、自由式管理问答、真实数据训练的故障预测。地点搜索为台账关键词匹配，重复工单使用同设备约束与字符双字相似度。报修已经按照维修专业和当前任务量自动派单；无人具备相应专业时进入等待队列。
+
+## 虚拟校园数字孪生视图
+
+登录后的 Dashboard 使用响应式 2.5D 校园模型展示建筑、道路、设施数量和未结问题，并直接打开对应位置与设施记录。视觉模型和状态层全部在项目内运行，不依赖 WebGL、CDN 或外部地图，因此 Windows 与 macOS 浏览器都能一致显示。
+
+当前几何、位置和设施是课程模拟数据，状态来自本地工单和巡检记录；它是数字孪生交互原型，不是依据 BIM、测绘或实时传感器建立的真实校园孪生。后续获得建筑平面图/BIM 和传感器 API 后，可以保留现有工单状态层并替换几何与实时数据源。
 
 ## 数据与隐私
 
@@ -109,7 +170,7 @@ CAMPUSCARE_MAIL_MODE=demo .venv/bin/python -B server.py
 | CAMPUSCARE_SMTP_USER | SMTP登录名 |
 | CAMPUSCARE_SMTP_PASSWORD | 邮件服务授权码/应用密码，私下配置，不提交源码 |
 
-SMTP 模式不在页面返回验证码；发送失败会显示错误，不伪装成功。目前未配置真实SMTP，邮件投递只做了模拟测试，需后续使用实际邮件服务验证。未实现短信验证码，避免引入短信平台和付费依赖。已有演示账号没有绑定邮箱，因此不能通过邮箱找回；可新注册账号体验完整流程。
+SMTP 模式不在页面返回验证码；发送失败会显示错误，不伪装成功。每台演示电脑都要使用自己的发件邮箱和授权码完成测试投递；授权码不会随 Git 代码传给其他组员。未实现短信验证码，避免引入短信平台和付费依赖。已有演示账号没有绑定邮箱，因此不能通过邮箱找回；可新注册账号体验完整流程。
 
 相关接口：`GET /api/auth/options`、`POST /api/auth/code`、`POST /api/auth/register`、`POST /api/auth/reset`；管理员邮件设置 `GET/POST /api/mail/settings`、测试发信 `POST /api/mail/test`。测试命令：`.venv/bin/python -B -m unittest -v test_system test_accounts test_mail test_users`。`test_accounts_browser.mjs`、`test_mail_browser.mjs`、`test_users_browser.mjs` 使用独立临时数据库验证浏览器流程，不污染演示用户数据；邮件验收脚本使用模拟 SMTP，不实际发信。
 

@@ -307,5 +307,53 @@ class ModelAdapterTests(unittest.TestCase):
                 self.assertFalse(any(x['source']=='Photo' for x in r['observations']))
                 self.assertTrue(any(x['source']=='User description' for x in r['observations']))
 
+    def test_followup_answers_are_sent_to_model_and_not_repeated(self):
+        captured = {}
+        followups = [{'question': 'Is water still leaking?', 'answer': 'Yes, slowly.'}]
+
+        def respond(request, timeout):
+            captured.update(json.loads(request.data))
+            return self.response({
+                'title': 'Slow water leak',
+                'summary': 'Water is still leaking slowly.',
+                'observations': [{'source': 'User description', 'text': 'The leak is ongoing.'}],
+                'questions': [],
+                'trade': 'Plumbing',
+                'priority': 'medium',
+                'uncertainty': 'The source requires an on-site inspection.',
+                'conflicts': [],
+            })
+
+        with patch.dict(os.environ, {'CAMPUSCARE_OLLAMA_URL': 'http://localhost:11434'}):
+            with patch('urllib.request.urlopen', side_effect=respond):
+                result = server.model_analysis(
+                    {'id': 'D1-SINK-01', 'name': 'Sink', 'category': 'Plumbing'},
+                    'The sink is leaking.', [], 'en', followups,
+                )
+        user_content = json.loads(captured['messages'][1]['content'])
+        self.assertEqual(user_content['follow_up_answers'], followups)
+        self.assertEqual(result['questions'], [])
+        self.assertEqual(result['trade'], 'Plumbing')
+
+    def test_followup_validation_requires_complete_answers(self):
+        self.assertEqual(server.valid_followups(None), [])
+        with self.assertRaises(server.APIError):
+            server.valid_followups([{'question': 'When did it start?', 'answer': ''}])
+
+    def test_vague_report_keeps_a_localized_clarification_guardrail(self):
+        payload = {
+            'title': '教室门问题', 'summary': '用户报告教室门有问题。',
+            'observations': [{'source': 'User description', 'text': '教室门有问题。'}],
+            'questions': [], 'trade': 'Carpentry', 'priority': 'medium',
+            'uncertainty': '具体表现未知。', 'conflicts': [],
+        }
+        with patch.dict(os.environ, {'CAMPUSCARE_OLLAMA_URL': 'http://localhost:11434'}):
+            with patch('urllib.request.urlopen', return_value=self.response(payload)):
+                result = server.model_analysis(
+                    {'id': 'A-201-DOOR-01', 'name': '教室门', 'category': 'Door Lock'},
+                    '门有问题。', [], 'zh',
+                )
+        self.assertEqual(result['questions'], ['请具体描述出现了什么现象，以及大约从什么时候开始。'])
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
