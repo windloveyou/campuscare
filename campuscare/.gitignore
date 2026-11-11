@@ -16,4 +16,5 @@ mail-settings.json
 *.log
 node_modules/
 artifacts/
+backups/
 dist/

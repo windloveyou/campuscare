@@ -35,7 +35,7 @@ WEB_FILES = {
     **{"/" + name: name for name in (
         "ui.js", "app.js", "workspace.js", "facilities.js", "bookings.js", "applications.js", "learning.js", "auth.js", "mail.js",
         "users.js", "admin-services.js", "landing.js", "motion.js", "style.css", "admin-services.css", "portal.css",
-        "little-wonders.css", "motion.css", "module6.css", "learning.css", "subsystems.css",
+        "little-wonders.css", "motion.css", "module6.css", "learning.css", "subsystems.css", "layout.css", "locale.js",
         "campus-art.svg", "gcu-quadrangle.webp", "gcu-learning-commons.webp", "gcu-campus-walk.webp",
         "gcu-library-terrace.webp", "gcu-campus-garden.webp", "gcu-gallery-studio.webp", "gcu-gallery-atrium.webp",
         "gcu-service-transcript.webp", "gcu-service-enrollment.webp", "gcu-service-repair.webp",

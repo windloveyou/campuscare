@@ -9,7 +9,6 @@ const workspace = (function () {
         report: ['plus', 'Report a Facility Issue'],
         bookings: ['calendar', 'Venue Booking'],
         tickets: ['tool', 'Work Orders'],
-        map: ['map', 'Campus Map'],
         'facility-overview': ['chart', 'Facilities Overview'],
         maintenance: ['clock', 'Maintenance and Forecasting'],
         users: ['users', 'User Management'],
@@ -33,7 +32,6 @@ const workspace = (function () {
         {key: 'pre-review', group: 'documents', icon: 'file', tag: 'Application Services', title: 'Application Pre-review', desc: 'Check requirements, materials, and eligibility before administrative review.', target: '#campus/applications', role: 'user'},
         {key: 'report', group: 'campus', icon: 'tool', tag: 'Campus Facilities', title: 'Report an Issue', desc: 'Report a facility issue, attach photos, and track the repair.', target: '#campus/report', role: 'user'},
         {key: 'bookings', group: 'campus', icon: 'calendar', tag: 'Campus Services', title: 'Venue Booking', desc: 'Check venue availability and submit a booking request.', target: '#campus/bookings', role: 'user'},
-        {key: 'map', group: 'campus', icon: 'map', tag: 'Campus Facilities', title: 'Campus Guide', desc: 'Explore campus buildings, residences, and facilities.', target: '#campus/map', role: 'user'},
         {key: 'review', group: 'staff', icon: 'grid', tag: 'Administrators', title: 'Application Review', desc: 'Assign, review, and process student applications.', target: paths.review, role: 'admin'},
         {key: 'maintenance', group: 'staff', icon: 'tool', tag: 'Technicians', title: 'Maintenance Workspace', desc: 'View assigned work orders and submit completed repairs for verification.', target: '#campus/tickets', role: 'technician'},
     ];
@@ -49,7 +47,7 @@ const workspace = (function () {
             {title: '02 · Academic Risk Warning', pages: ['academic-risk']},
         ]},
         {key: 'campus', title: 'Facility & Resource Management', icon: 'tool', description: 'Report issues, track repairs, and reserve campus spaces.', modules: [
-            {title: '03 · Maintenance & Repair', pages: ['report', 'tickets', 'map', 'facility-overview', 'maintenance', 'assistant']},
+            {title: '03 · Maintenance & Repair', pages: ['report', 'tickets', 'facility-overview', 'maintenance', 'assistant']},
             {title: '04 · Venue Booking', pages: ['bookings']},
         ]},
         {key: 'documents', title: 'Administrative Services', icon: 'file', description: 'Request certificates, check materials, and follow progress.', modules: [
@@ -60,7 +58,7 @@ const workspace = (function () {
     function visibleSubsystems(user) {
         const visible = id => {
             if (user.role === 'admin') return true;
-            if (user.role === 'technician') return ['tickets', 'map'].includes(id);
+            if (user.role === 'technician') return ['tickets'].includes(id);
             if (['facility-overview', 'maintenance', 'assistant'].includes(id)) return false;
             return id !== 'admin-services' || supports(user);
         };
@@ -115,7 +113,7 @@ const workspace = (function () {
                 <p>${tech ? 'Work orders, repair progress, and completion checks' : student ? 'Administrative services, maintenance requests, and facilities' : 'Maintenance requests and facilities'}</p>
                 <div class="as-actions">${student ? action(paths.transcript, 'Request a Transcript' + linkArrow(), 'btn campus-primary')
                     : action(campusUrl(tech ? 'tickets' : 'report'), (tech ? 'View Maintenance Tasks' : 'Report an Issue') + linkArrow(), 'btn campus-primary')}
-                    ${student ? action(paths.requests, 'View Applications', 'btn campus-quiet') : action(campusUrl('map'), 'Open Campus Map', 'btn campus-quiet')}</div>
+                    ${student ? action(paths.requests, 'View Applications', 'btn campus-quiet') : ''}</div>
             </div><span class="member-hero-stamp">GCU / CAMPUS PLAN</span></section>
             <div class="editorial-head home-section-head"><div><span class="editorial-label"><i></i> YOUR WORKSPACE</span><h2>Explore by subsystem</h2></div></div>
             ${subsystemHome(s.user)}

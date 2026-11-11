@@ -1,0 +1,70 @@
+/* Platform-neutral layout: no external fonts or platform-specific measurements. */
+:root { color-scheme: light; --bg:#f4f6f8; --paper:#fff; --ink:#243342; --muted:#647383; --line:#dfe5eb; --green:#245a70; --brand-teal:#245a70; --shadow:0 2px 6px #24334208; }
+html { scrollbar-gutter:stable; }
+body,button,input,select,textarea { font-family:Arial,"Segoe UI","Microsoft YaHei","PingFang SC",sans-serif; font-weight:400; }
+body { background:var(--bg); font-size:14px; line-height:1.55; }
+*,*::before,*::after { box-sizing:border-box; }
+button,input,select,textarea { font-size:14px; }
+button { line-height:1.4; }
+input,select,textarea { min-width:0; max-width:100%; }
+h1,h2,h3,h4 { font-family:inherit; letter-spacing:normal; overflow-wrap:break-word; }
+button:focus-visible,a:focus-visible,summary:focus-visible { outline:2px solid #276681; outline-offset:3px; }
+.workspace-shell { display:grid; grid-template-columns:260px minmax(0,1fr); }
+.workspace-shell .sidebar { width:260px; height:100dvh; padding:22px 10px; background:#fff; border-right:1px solid var(--line); }
+.workspace-shell .main { grid-column:2; width:100%; min-width:0; }
+.workspace-shell .content { width:100%; max-width:1440px; margin:0 auto; padding:28px 32px 48px; }
+.workspace-shell .site-brand strong { font-size:20px; }
+.workspace-shell .site-brand > span:last-child > span { font-size:10px; letter-spacing:0; }
+.workspace-shell .site-brand-mark { width:32px; height:32px; border-radius:6px; background:#245a70; color:#fff; }
+.workspace-shell .topbar { min-height:64px; padding:12px 28px; flex-wrap:wrap; border-bottom:1px solid var(--line); }
+.workspace-shell .top-actions { flex-wrap:wrap; gap:12px; }
+.workspace-shell .breadcrumb { flex-wrap:wrap; }
+.workspace-shell .workspace-nav-group { display:block; }
+.workspace-shell .navitem { width:100%; text-align:left; }
+.workspace-shell .navitem.active { box-shadow:inset 3px 0 #245a70; background:#edf3f7; color:#245a70; }
+.subsystem-nav summary { font-size:12px; color:#344657; font-weight:600; }
+.module-nav-label { font-size:11px; letter-spacing:0; color:#71808d; }
+.workspace-shell .subsystem-nav .navitem { font-size:13px; padding:9px 12px; }
+.workspace-shell .page-head h1 { font-size:28px; line-height:1.25; }
+.workspace-shell .card,.workspace-shell .detail-box,.subsystem-panel { border-radius:8px; box-shadow:none; border:1px solid var(--line); }
+.member-hero,.operations-hero { min-height:0; padding:24px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--ink); }
+.member-hero .campus-art,.member-hero-stamp,.editorial-label i { display:none; }
+.member-hero-copy { max-width:none; width:100%; }
+.member-hero h1,.operations-hero h1 { font-size:30px; color:var(--ink); margin:8px 0; }
+.member-hero p,.operations-hero p { color:var(--muted); }
+.editorial-label { letter-spacing:.06em; color:#647383; font-size:10px; }
+.home-section-head h2 { font-size:21px; }
+.subsystem-directory { gap:16px; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.subsystem-panel { display:block; }
+.subsystem-panel > header,.subsystem-panel.tone-campus > header,.subsystem-panel.tone-documents > header { background:#fff; min-height:0; padding:20px; border-bottom:1px solid var(--line); }
+.subsystem-panel h2 { font-size:18px; margin:12px 0 8px; }
+.subsystem-symbol { background:#edf3f7; border-radius:6px; color:#245a70; }
+.subsystem-number { letter-spacing:.05em; }
+.subsystem-modules { padding:0 16px 16px; }
+.subsystem-link { font-size:13px; padding:10px 4px; }
+.subsystem-link span { overflow-wrap:anywhere; }
+.dashboard-map { margin-top:32px; border-top:1px solid var(--line); padding-top:24px; }
+.dashboard-map .page-head h1 { font-size:23px; }
+.dashboard-map .two-col { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+.dashboard-map svg { max-width:100%; height:auto; }
+.table-wrap { max-width:100%; overflow:auto; }
+table { width:100%; }
+th,td { overflow-wrap:break-word; }
+.two-col > *,.form-grid > *,.operations-metrics > * { min-width:0; }
+.public-site { --font-heading:Arial,"Microsoft YaHei",sans-serif; }
+.public-site h1,.public-site h2,.public-site h3,.public-site .brand-text { font-family:inherit; }
+.public-site .hero { max-height:480px; }
+.public-site .section { padding-top:56px; padding-bottom:56px; }
+.public-site .section-title { font-size:32px; }
+.public-site .section-marker,.public-site .campus-doodle,.public-site .class-symbol { display:none; }
+.public-site .class-card,.public-site .ribbon,.public-site .split-photo-frame { border-radius:8px; box-shadow:none; }
+.public-site .class-title-row { min-height:0; }
+.public-site .class-name { font-size:20px; }
+.public-site .class-desc { line-height:1.65; }
+.public-site .class-tag { border-radius:4px; }
+.public-site .directory-tabs button { border-radius:6px; }
+.public-site .subsystem-ribbon .ribbon-item { padding:22px; }
+.locale-switch { position:fixed; right:18px; bottom:18px; z-index:100; border:1px solid #c5d0da; border-radius:6px; background:#fff; color:#245a70; padding:9px 14px; font-size:13px; box-shadow:0 2px 8px #00000010; cursor:pointer; }
+@media(max-width:1200px) { .subsystem-directory { grid-template-columns:1fr; } .subsystem-panel { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); } .subsystem-panel > header { border-right:1px solid var(--line); border-bottom:0; } }
+@media(max-width:900px) { .workspace-shell { display:block; } .workspace-shell .sidebar { width:100%; height:auto; position:relative; padding:16px; } .workspace-shell .main { width:100%; } .workspace-shell .sidebar nav { display:block; padding:8px 0; } .workspace-shell .topbar { padding:12px 16px; } .workspace-shell .content { padding:20px 16px 48px; } .dashboard-map .two-col { grid-template-columns:1fr; } .subsystem-nav { margin-top:6px; padding-top:6px; } }
+@media(max-width:560px) { .subsystem-panel { display:block; } .subsystem-panel > header { border-right:0; border-bottom:1px solid var(--line); } .member-hero,.operations-hero { padding:18px; } .member-hero h1,.operations-hero h1 { font-size:25px; } .public-site .section-title { font-size:26px; } .public-site .section { padding-top:36px; padding-bottom:36px; } .page-head { flex-wrap:wrap; } }

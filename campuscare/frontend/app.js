@@ -36,6 +36,7 @@ function clearSession() {
 }
 
 function routeFor(user, hash = location.hash) {
+    if (hash === '#campus/map') return 'overview';
     if (adminServices.isPortalHash(hash)) return workspace.allowed(user, 'admin-services') ? 'admin-services' : null;
     const match = hash.match(/^#campus\/([a-z-]+)$/);
     return match && workspace.allowed(user, match[1]) ? match[1] : null;
@@ -188,6 +189,8 @@ function render() {
     const content = $('#content');
     if (page === 'overview') {
         content.innerHTML = workspace.home(state);
+        content.insertAdjacentHTML('beforeend', `<section class="dashboard-map" aria-label="Campus Map">${facilities.views.map().replace('<h1>', '<h2>').replace('</h1>', '</h2>')}</section>`);
+        facilities.bind();
         workspace.bindHome(user);
     } else if (page === 'admin-services') {
         content.innerHTML = adminServices.view();
