@@ -143,8 +143,8 @@ class SystemTests(unittest.TestCase):
         self.assertEqual(move(user, "accept")[0], 200)
         self.assertEqual(current(user)["status"], "closed")
         self.assertEqual(move(user, "reopen")[0], 200)
-        self.assertEqual(current(user)["status"], "pending")
-        self.assertEqual(tech.call("/tickets/" + tid)[0], 404)
+        self.assertEqual(current(user)["status"], "assigned")
+        self.assertEqual(tech.call("/tickets/" + tid)[0], 200)
 
     def test_03_analysis_duplicates_and_follow(self):
         c = self.client("student")
@@ -248,7 +248,7 @@ class SystemTests(unittest.TestCase):
             {"id": one, "version": 1, "action": "cancel", "note": "取消其中一条"},
         )
         a = next(a for a in admin.call("/bootstrap")[1]["assets"] if a["id"] == aid)
-        self.assertEqual(a["status"], "pending")
+        self.assertEqual(a["status"], "assigned")
         self.assertEqual(a["open_count"], 1)
 
     def test_09_logout_invalidates_session(self):

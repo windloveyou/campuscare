@@ -567,7 +567,7 @@ def model_advisory(type_id, values, applicant):
         "{\"advice\":[\"...\"]}"
     )
     payload = {
-        "model": os.environ.get("CAMPUSCARE_MODEL", "qwen3.5:0.8b"),
+        "model": os.environ.get("CAMPUSCARE_MODEL", "gemma3:4b"),
         "stream": False,
         "format": "json",
         "messages": [

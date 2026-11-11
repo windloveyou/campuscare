@@ -517,7 +517,7 @@ async function openNotices() {
         return toast(e.message);
     }
     const state_ = data.notices || [];
-    drawer(`<div class="drawer-head"><div><div class="eyebrow">NOTIFICATIONS</div><h2>Application Notices</h2>
+    drawer(`<div class="drawer-head"><div><div class="eyebrow">NOTIFICATIONS</div><h2>Campus Notices</h2>
             <div class="small muted" style="margin-top:6px">${data.unread ? data.unread + ' unread' : 'All read'}</div></div>
             <button class="close" data-action="close" aria-label="Close">×</button></div>
         ${data.unread ? '<button class="linkbtn" id="app-read-all">Mark All as Read</button>' : ''}

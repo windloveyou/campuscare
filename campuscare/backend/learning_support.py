@@ -120,7 +120,7 @@ def local_model_answer(question, documents):
         for index, doc in enumerate(documents)
     ]
     payload = {
-        "model": os.environ.get("CAMPUSCARE_MODEL", "qwen3.5:0.8b"),
+        "model": os.environ.get("CAMPUSCARE_MODEL", "gemma3:4b"),
         "stream": False,
         "messages": [
             {

@@ -2,6 +2,19 @@
 // Local UI labels only. User input and stored records keep their original language.
 const campusLocale = (() => {
     const zh = {
+        'Automatically Assigned':'自动派单','Awaiting Specialist':'等待专业维修员',
+        'Reports are assigned automatically by specialty and workload.':'系统根据维修专业和工作量自动派单。',
+        'Retry Automatic Dispatch':'重试自动派单',
+        'Waiting for an available specialist. Administrators can assign a technician or retry automatic dispatch.':'正在等待匹配专业的维修员。管理员可手动指派或重试自动派单。',
+        'Work order awaiting a specialist':'工单等待专业维修员','Work order automatically assigned':'工单已自动派单','Work order canceled':'工单已取消',
+        'Repair has already started. Contact the assigned technician to discuss cancellation.':'维修已开始，请联系负责的维修员协商取消。',
+        'Campus Notices':'校园通知',
+        'Start Repair':'开始维修','Repair Started':'已开始维修','Resume Repair':'继续维修','Repair Resumed':'已继续维修',
+        'Submit for Verification':'提交验收','Confirm Completion':'确认完成','Completion Verified':'验收通过',
+        'Reopen Unresolved Issue':'重新打开未解决的问题','Reopened':'已重新打开','Cancel Report':'取消报修',
+        'Work Log':'处理记录','Work Order History':'工单历史','Notes or Findings':'备注或检修结果',
+        'Add Note':'添加备注','Note Added':'已添加备注','Assign or Reassign Technician':'指派或重新指派维修员',
+        'Confirm Assignment':'确认派单','Work order updated.':'工单已更新。',
         'Dashboard':'工作台','Campus Map':'校园地图','Campus Services':'校园服务','Campus Sign In':'校园登录',
         'Intelligent Learning Support':'智能学习支持','Facility & Resource Management':'设施与资源管理','Administrative Services':'行政服务',
         '01 · Intelligent Q&A':'01 · 智能问答','02 · Academic Risk Warning':'02 · 学业风险预警',
